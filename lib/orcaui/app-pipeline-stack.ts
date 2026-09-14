@@ -32,7 +32,8 @@ export class OrcaUIAppPipelineStack extends Stack {
      * React Build and Deploy Pipeline (independent from infra pipeline)
      * This pipeline is used to build the react app and deploy it to the specified environment
      * It is triggered by a webhook from the CodeStar connection.
-     * Note: push event from `deploy` folder will be excluded to trigger the pipeline, as it is used for infra pipeline deployment
+     * Note: pushes under `deploy/` are excluded from triggering the pipeline. The infra CDK app used to live there and
+     * now lives in umccr/frontend-infrastructure-pipelines; the filter is kept until `deploy/` is removed from orca-ui.
      */
     const sourceOutput = new Artifact();
     const buildOutput = new Artifact();
@@ -234,7 +235,7 @@ export class OrcaUIAppPipelineStack extends Stack {
       ],
     });
 
-    // Add event filter to exclude push event from `deploy` folder to trigger the pipeline
+    // Add event filter to exclude push event from the legacy `deploy` folder to trigger the pipeline
     const appCiCdCfnPipeline = appCiCdPipeline.node.defaultChild as CfnPipeline;
     appCiCdCfnPipeline.addPropertyOverride('Triggers', [
       {

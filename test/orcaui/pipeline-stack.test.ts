@@ -86,9 +86,21 @@ const pipelineStacks: {
     stackId: 'TestInfrastructureDeploymentStack',
     StackClass: InfrastructureDeploymentStack,
     pipelineName: 'OrcaBus-OrcaUIInfrastructure',
-    repository: 'OrcaBus/orca-ui',
+    // DeploymentStackPipeline hardcodes the `OrcaBus` owner; see the TODO in infrastructure-deployment-stack.ts
+    repository: 'OrcaBus/frontend-infrastructure-pipelines',
     sourceActionName: 'pipeline-src',
-    filePaths: { Includes: ['deploy/**'] },
+    filePaths: {
+      Includes: [
+        'bin/**',
+        'lib/common/**',
+        'lib/orcaui/**',
+        'cdk.json',
+        'package.json',
+        'yarn.lock',
+        '.yarnrc.yml',
+        'tsconfig.json',
+      ],
+    },
     expectedStages: ['Source', 'Build', 'OrcaBusBeta', 'OrcaBusGamma', 'OrcaBusProd'],
   },
   {
@@ -204,14 +216,15 @@ describe('InfrastructureDeploymentStack build command behavior', () => {
     },
   });
 
-  test('uses deploy Yarn commands instead of default root pnpm commands', () => {
+  test('uses root Yarn commands instead of default root pnpm commands', () => {
     const buildSpecs = getCodeBuildProjectBuildSpecs(Template.fromStack(stack)).join('\n');
 
     expect(buildSpecs).toContain('"corepack enable"');
-    expect(buildSpecs).toContain('"yarn --cwd deploy --version"');
-    expect(buildSpecs).toContain('"yarn --cwd deploy install --immutable"');
-    expect(buildSpecs).toContain('"yarn --cwd deploy cdk synth"');
-    expect(buildSpecs).toContain('"yarn --cwd deploy run test"');
+    expect(buildSpecs).toContain('"yarn --version"');
+    expect(buildSpecs).toContain('"yarn install --immutable"');
+    expect(buildSpecs).toContain('"yarn cdk synth"');
+    expect(buildSpecs).toContain('"yarn run test"');
+    expect(buildSpecs).not.toContain('--cwd deploy');
     expect(buildSpecs).not.toContain('"cd deploy"');
     expect(buildSpecs).not.toContain('pnpm test');
     expect(buildSpecs).not.toContain('pnpm install --frozen-lockfile');
