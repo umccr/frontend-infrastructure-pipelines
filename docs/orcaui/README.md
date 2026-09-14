@@ -1,16 +1,18 @@
 # OrcaUI Deployment
 
-This directory contains the AWS CDK app for OrcaUI hosting infrastructure and CI/CD pipelines.
+AWS CDK stacks for OrcaUI hosting infrastructure and CI/CD pipelines. Source lives in [`lib/orcaui/`](../../lib/orcaui/).
+
+> Migrated from `OrcaBus/orca-ui` `deploy/`. See [`docs/migration-from-orca-ui.md`](../migration-from-orca-ui.md) for the cutover plan.
 
 ## Overview
 
-The CDK app is composed in [`bin.ts`](./bin.ts) and creates three top-level pipeline stacks in the toolchain account:
+The CDK app is composed in [`bin/app.ts`](../../bin/app.ts) and creates three top-level OrcaUI pipeline stacks in the toolchain account:
 
-| CDK stack                      | CodePipeline name              | Source repository           | Trigger              | Purpose                                                                                 |
-| ------------------------------ | ------------------------------ | --------------------------- | -------------------- | --------------------------------------------------------------------------------------- |
-| `OrcaUIInfrastructurePipeline` | `OrcaBus-OrcaUIInfrastructure` | `OrcaBus/orca-ui` `main`    | `deploy/**` only     | Synthesizes CDK and deploys `InfrastructureStack` to beta, gamma, and prod.             |
-| `OrcaUIAppPipeline`            | `OrcaUIAppCICDPipeline`        | `OrcaBus/orca-ui` `main`    | excludes `deploy/**` | Builds and deploys the current UI app to the primary CloudFront bucket.                 |
-| `OrcaUIV2AppPipeline`          | `OrcaUIV2AppCICDPipeline`      | `OrcaBus/orca-ui-v2` `main` | excludes `deploy/**` | Builds and deploys UI v2 to the configured v2 CloudFront bucket under the `v2/` prefix. |
+| CDK stack                      | CodePipeline name              | Source repository                                | Trigger                        | Purpose                                                                                 |
+| ------------------------------ | ------------------------------ | ------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------- |
+| `OrcaUIInfrastructurePipeline` | `OrcaBus-OrcaUIInfrastructure` | `umccr/frontend-infrastructure-pipelines` `main` | shared files + `lib/orcaui/**` | Synthesizes CDK and deploys `InfrastructureStack` to beta, gamma, and prod.             |
+| `OrcaUIAppPipeline`            | `OrcaUIAppCICDPipeline`        | `OrcaBus/orca-ui` `main`                         | excludes `deploy/**`           | Builds and deploys the current UI app to the primary CloudFront bucket.                 |
+| `OrcaUIV2AppPipeline`          | `OrcaUIV2AppCICDPipeline`      | `OrcaBus/orca-ui-v2` `main`                      | excludes `deploy/**`           | Builds and deploys UI v2 to the configured v2 CloudFront bucket under the `v2/` prefix. |
 
 `InfrastructureStack` owns the hosted app infrastructure in each target account:
 
@@ -24,8 +26,8 @@ The CDK app is composed in [`bin.ts`](./bin.ts) and creates three top-level pipe
 
 Infrastructure changes flow through `OrcaUIInfrastructurePipeline`:
 
-1. A push to `OrcaBus/orca-ui` on `main` under `deploy/**` triggers the infrastructure pipeline.
-2. The pipeline runs `cd deploy`, installs dependencies, and runs `yarn cdk synth`.
+1. A push to this repository on `main` that touches `lib/orcaui/**` or shared files (`bin/**`, `lib/common/**`, `package.json`, `yarn.lock`, `cdk.json`, ...) triggers the infrastructure pipeline. The exact list is `ORCAUI_INFRASTRUCTURE_FILE_PATHS` in [`infrastructure-deployment-stack.ts`](../../lib/orcaui/infrastructure-deployment-stack.ts).
+2. The pipeline installs dependencies at the repository root, runs the tests, and runs `yarn cdk synth`.
 3. CDK self-mutation updates the pipeline when needed.
 4. `InfrastructureStack` is deployed to beta, gamma, then prod. Gamma has a manual approval before promotion to prod.
 
@@ -34,11 +36,11 @@ Application code deploys independently:
 - `OrcaUIAppPipeline` builds `OrcaBus/orca-ui`, syncs the `dist/` artifact to the primary bucket root, then invokes the env config Lambda.
 - `OrcaUIV2AppPipeline` builds `OrcaBus/orca-ui-v2`, syncs the `build/` artifact to `s3://<v2-bucket>/v2/`, then invokes the same env config Lambda.
 
-UI v2 is currently enabled only where `v2CloudFrontBucketNameConfig` is set in [`config.ts`](./config.ts). See [`docs/ui-v2-deployment-strategy.md`](../docs/ui-v2-deployment-strategy.md) for the dual-bucket `/v2/` hosting details.
+UI v2 is currently enabled only where `v2CloudFrontBucketNameConfig` is set in [`lib/orcaui/config.ts`](../../lib/orcaui/config.ts). See [`ui-v2-deployment-strategy.md`](./ui-v2-deployment-strategy.md) for the dual-bucket `/v2/` hosting details.
 
 ## Env Config Lambda
 
-The env config Lambda is defined in [`lambda/env_config_and_cdn_refresh.py`](./lambda/env_config_and_cdn_refresh.py).
+The env config Lambda is defined in [`lib/orcaui/lambda/env_config_and_cdn_refresh.py`](../../lib/orcaui/lambda/env_config_and_cdn_refresh.py).
 
 The app deploy CodeBuild projects invoke this Lambda after syncing assets to S3. The Lambda:
 
@@ -98,11 +100,7 @@ Use the stage-specific function name when targeting another environment:
 
 ## Development
 
-Change to the deploy directory:
-
-```sh
-cd deploy
-```
+Run all commands from the repository root.
 
 Install dependencies:
 
