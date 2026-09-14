@@ -24,7 +24,7 @@ import { Architecture, Code, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { AccountPrincipal, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Function } from 'aws-cdk-lib/aws-lambda';
-import { TOOLCHAIN_ACCOUNT_ID } from '../config';
+import { TOOLCHAIN_ACCOUNT_ID } from '../common/config';
 
 export type InfrastructureStackProps = {
   cloudFrontBucketName: string;
@@ -80,7 +80,7 @@ export class InfrastructureStack extends Stack {
 
     const configLambda = new Function(this, 'EnvConfigLambda', {
       functionName: props.configLambdaName,
-      code: Code.fromAsset(path.join(__dirname, '..', 'lambda')),
+      code: Code.fromAsset(path.join(__dirname, 'lambda')),
       timeout: Duration.minutes(10),
       handler: 'env_config_and_cdn_refresh.handler',
       logGroup: logGroup,
@@ -172,7 +172,7 @@ export class InfrastructureStack extends Stack {
     const spaRewriteFn = new CloudFrontFunction(this, 'SpaRewriteFn', {
       runtime: FunctionRuntime.JS_2_0,
       code: FunctionCode.fromFile({
-        filePath: path.join(__dirname, '../lambda/spa-rewrite.js'),
+        filePath: path.join(__dirname, 'lambda', 'spa-rewrite.js'),
       }),
     });
 

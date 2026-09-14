@@ -10,7 +10,8 @@
 *.js
 # add except for jest.config.js
 !jest.config.js
-!lambda/spa-rewrite.js
+# CloudFront Function / Lambda source written in plain JS
+!lib/**/lambda/**/*.js
 *.d.ts
 node_modules
 

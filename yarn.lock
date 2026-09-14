@@ -3488,30 +3488,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"deploy@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "deploy@workspace:."
-  dependencies:
-    "@aws-sdk/client-s3": "npm:^3.1017.0"
-    "@aws-sdk/lib-storage": "npm:^3.1017.0"
-    "@orcabus/platform-cdk-constructs": "npm:^1.4.0"
-    "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:25.5.0"
-    "@types/regenerator-runtime": "npm:^0.13.8"
-    aws-cdk: "npm:^2.1113.0"
-    aws-cdk-lib: "npm:^2.244.0"
-    cdk-nag: "npm:^2.37.55"
-    constructs: "npm:^10.6.0"
-    esbuild: "npm:^0.27.4"
-    jest: "npm:^30.3.0"
-    regenerator-runtime: "npm:^0.14.1"
-    source-map-support: "npm:^0.5.21"
-    ts-jest: "npm:^29.4.6"
-    ts-node: "npm:^10.9.2"
-    typescript: "npm:~5.9.3"
-  languageName: unknown
-  linkType: soft
-
 "detect-newline@npm:^3.1.0":
   version: 3.1.0
   resolution: "detect-newline@npm:3.1.0"
@@ -3864,6 +3840,30 @@ __metadata:
   checksum: 10c0/8986e4af2430896e65bc2788d6679067294d6aee9545daefc84923a0a4b399ad9c7a3ea7bd8c0b2b80fdf4a92de4c69df3f628233ff3224260e9c1541a9e9ed3
   languageName: node
   linkType: hard
+
+"frontend-infrastructure-pipelines@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "frontend-infrastructure-pipelines@workspace:."
+  dependencies:
+    "@aws-sdk/client-s3": "npm:^3.1017.0"
+    "@aws-sdk/lib-storage": "npm:^3.1017.0"
+    "@orcabus/platform-cdk-constructs": "npm:^1.4.0"
+    "@types/jest": "npm:^30.0.0"
+    "@types/node": "npm:25.5.0"
+    "@types/regenerator-runtime": "npm:^0.13.8"
+    aws-cdk: "npm:^2.1113.0"
+    aws-cdk-lib: "npm:^2.244.0"
+    cdk-nag: "npm:^2.37.55"
+    constructs: "npm:^10.6.0"
+    esbuild: "npm:^0.27.4"
+    jest: "npm:^30.3.0"
+    regenerator-runtime: "npm:^0.14.1"
+    source-map-support: "npm:^0.5.21"
+    ts-jest: "npm:^29.4.6"
+    ts-node: "npm:^10.9.2"
+    typescript: "npm:~5.9.3"
+  languageName: unknown
+  linkType: soft
 
 "fs-extra@npm:^11.3.3":
   version: 11.3.4

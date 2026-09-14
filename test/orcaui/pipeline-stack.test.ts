@@ -4,13 +4,14 @@ import { SynthesisMessage } from '@aws-cdk/cloud-assembly-api';
 import { describe, expect, jest, test } from '@jest/globals';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import type { Construct } from 'constructs';
-import { InfrastructureDeploymentStack } from '../lib/infrastructure-deployment-stack';
-import { OrcaUIAppPipelineStack } from '../lib/orca-ui-app-pipeline-stack';
-import { OrcaUIV2AppPipelineStack } from '../lib/orca-ui-v2-app-pipeline-stack';
-import { AppStage, v2CloudFrontBucketNameConfig } from '../config';
+import { AppStage } from '../../lib/common/config';
+import { InfrastructureDeploymentStack } from '../../lib/orcaui/infrastructure-deployment-stack';
+import { OrcaUIAppPipelineStack } from '../../lib/orcaui/app-pipeline-stack';
+import { OrcaUIV2AppPipelineStack } from '../../lib/orcaui/v2-app-pipeline-stack';
+import { v2CloudFrontBucketNameConfig } from '../../lib/orcaui/config';
 
 // we are mocking the infrastructure stack here, as we have a dedicated cdk-nag test for it
-jest.mock('../lib/infrastructure-stack', () => {
+jest.mock('../../lib/orcaui/infrastructure-stack', () => {
   return {
     InfrastructureStack: jest.fn((value: Construct) => {
       return new Stack(value, 'mockStack', {});

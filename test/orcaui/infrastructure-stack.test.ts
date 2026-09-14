@@ -3,13 +3,12 @@ import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { SynthesisMessage } from '@aws-cdk/cloud-assembly-api';
 import { describe, expect, test } from '@jest/globals';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { InfrastructureStack } from '../lib/infrastructure-stack';
+import { accountIdAlias, AppStage } from '../../lib/common/config';
+import { InfrastructureStack } from '../../lib/orcaui/infrastructure-stack';
 import {
-  accountIdAlias,
-  AppStage,
   getInfrastructureStackConfig,
   v2CloudFrontBucketNameConfig,
-} from '../config';
+} from '../../lib/orcaui/config';
 
 function synthesisMessageToString(sm: SynthesisMessage): string {
   return `${sm.entry.data} [${sm.id}]`;

@@ -9,14 +9,12 @@ import {
 import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
+import { accountIdAlias, AppStage, REGION } from '../common/config';
 import {
-  accountIdAlias,
-  AppStage,
   cloudFrontBucketNameConfig,
   configLambdaNameConfig,
   getInfrastructureStackConfig,
-  REGION,
-} from '../config';
+} from './config';
 
 export class OrcaUIAppPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {

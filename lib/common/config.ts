@@ -1,0 +1,20 @@
+/**
+ * Organisation-wide constants shared by every frontend deployed from this repository.
+ * Frontend-specific configuration lives next to its stacks, e.g. `lib/orcaui/config.ts`.
+ */
+
+export enum AppStage {
+  BETA = 'beta',
+  GAMMA = 'gamma',
+  PROD = 'prod',
+}
+
+export const TOOLCHAIN_ACCOUNT_ID = '383856791668'; // umccr_bastion
+
+export const accountIdAlias: Record<AppStage, string> = {
+  [AppStage.BETA]: '843407916570', // umccr_development
+  [AppStage.GAMMA]: '455634345446', // umccr_staging
+  [AppStage.PROD]: '472057503814', // umccr_production
+};
+
+export const REGION = 'ap-southeast-2';

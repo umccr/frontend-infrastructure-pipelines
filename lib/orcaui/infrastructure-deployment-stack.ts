@@ -1,7 +1,8 @@
 import { Construct } from 'constructs';
 import { DeploymentStackPipeline } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
 import { InfrastructureStack } from './infrastructure-stack';
-import { getInfrastructureStackConfig, AppStage } from '../config';
+import { AppStage } from '../common/config';
+import { getInfrastructureStackConfig } from './config';
 import { Stack, StackProps } from 'aws-cdk-lib';
 
 export class InfrastructureDeploymentStack extends Stack {

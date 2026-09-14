@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { InfrastructureDeploymentStack } from './lib/infrastructure-deployment-stack';
-import { OrcaUIAppPipelineStack } from './lib/orca-ui-app-pipeline-stack';
-import { OrcaUIV2AppPipelineStack } from './lib/orca-ui-v2-app-pipeline-stack';
-import { TOOLCHAIN_ACCOUNT_ID, REGION } from './config';
+import { TOOLCHAIN_ACCOUNT_ID, REGION } from '../lib/common/config';
+import { InfrastructureDeploymentStack } from '../lib/orcaui/infrastructure-deployment-stack';
+import { OrcaUIAppPipelineStack } from '../lib/orcaui/app-pipeline-stack';
+import { OrcaUIV2AppPipelineStack } from '../lib/orcaui/v2-app-pipeline-stack';
 
 const app = new cdk.App();
+
+// ---------------------------------------------------------------------------
+// OrcaUI (https://github.com/OrcaBus/orca-ui, https://github.com/OrcaBus/orca-ui-v2)
+// ---------------------------------------------------------------------------
 
 new InfrastructureDeploymentStack(app, 'OrcaUIInfrastructurePipeline', {
   env: {

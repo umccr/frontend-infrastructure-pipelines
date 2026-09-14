@@ -1,5 +1,5 @@
 {
-  "app": "yarn run -B ts-node bin.ts",
+  "app": "yarn run -B ts-node bin/app.ts",
   "watch": {
     "include": ["**"],
     "exclude": [
