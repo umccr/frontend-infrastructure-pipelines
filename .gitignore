@@ -1,0 +1,18 @@
+# pnpm
+.pnpm-store/
+.pnpm-debug.log
+
+*.js
+# add except for jest.config.js
+!jest.config.js
+# CloudFront Function / Lambda source written in plain JS
+!lib/**/lambda/**/*.js
+*.d.ts
+node_modules
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+# OS
+.DS_Store

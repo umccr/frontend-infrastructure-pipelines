@@ -1,0 +1,11 @@
+# pnpm blocks dependency lifecycle (postinstall) scripts by default. These packages
+# ship native-binary build scripts that are not needed for `pnpm test` or `cdk synth`
+# in this repo, so we keep them disabled to avoid the "Ignored build scripts" warning
+# and to keep installs deterministic in CI and the pipeline.
+#
+# If a future task actually needs esbuild's native binary at runtime (rather than via
+# ts-node/ts-jest transpilation), flip the relevant entry to `true` and re-run install.
+allowBuilds:
+  '@parcel/watcher': false
+  esbuild: false
+  unrs-resolver: false
