@@ -13,23 +13,28 @@ from one repository.
   - `OrcaUIAppPipeline`
   - `OrcaUIV2AppPipeline`
   - `OrcaBus{Beta,Gamma,Prod}-OrcaUIInfrastructureStack` (templates and asset hashes)
-- The only intended difference is in `OrcaUIInfrastructurePipeline` (the self-mutating `OrcaBus-OrcaUIInfrastructure`
+- The only intended differences are in `OrcaUIInfrastructurePipeline` (the self-mutating `OrcaBus-OrcaUIInfrastructure`
   CodePipeline):
-  - source repository `orca-ui` → `frontend-infrastructure-pipelines`
+  - source repository `OrcaBus/orca-ui` → `umccr/frontend-infrastructure-pipelines`
   - trigger file paths `deploy/**` → shared files + `lib/orcaui/**`
-  - synth/test commands run from the repository root instead of `--cwd deploy`
+  - synth/test commands run from the repository root instead of `--cwd deploy`, and use pnpm instead of Yarn
+    (`pnpm install --frozen-lockfile`, `pnpm cdk synth`, `pnpm run test`)
+
+  The app pipelines (`OrcaUIAppPipeline`, `OrcaUIV2AppPipeline`) are unchanged: they still source `OrcaBus/orca-ui`
+  and `OrcaBus/orca-ui-v2` and build those repos with their own package managers (Yarn for `orca-ui`, pnpm for
+  `orca-ui-v2`). The move to pnpm applies only to this repository's own tooling and the infrastructure pipeline.
 
 ## Blockers to resolve before cutover
 
-1. **GitHub owner.** `DeploymentStackPipeline` from `@orcabus/platform-cdk-constructs` always sources from
-   `OrcaBus/<githubRepo>`. This repository is `umccr/frontend-infrastructure-pipelines`, so the pipeline currently
-   synthesizes a source of `OrcaBus/frontend-infrastructure-pipelines`, which does not exist. Resolve by either:
-   - adding a GitHub owner prop upstream in `platform-cdk-constructs`, then setting it to `umccr` in
-     [`lib/orcaui/infrastructure-deployment-stack.ts`](../lib/orcaui/infrastructure-deployment-stack.ts); or
-   - moving this repository into the `OrcaBus` organisation.
+1. **GitHub owner. (Resolved.)** `DeploymentStackPipeline` used to hardcode the `OrcaBus/<githubRepo>` source owner.
+   As of `@orcabus/platform-cdk-constructs@1.9.8` it accepts a `githubOwner` prop (default `OrcaBus`), and
+   [`lib/orcaui/infrastructure-deployment-stack.ts`](../lib/orcaui/infrastructure-deployment-stack.ts) sets
+   `githubOwner: 'umccr'`. The pipeline now synthesizes a source of `umccr/frontend-infrastructure-pipelines`. No
+   further action is needed here unless the repository moves organisations.
 2. **CodeStar connection access.** The connection referenced by the `codestar_github_arn` SSM parameter in the
-   toolchain account must be able to read this repository. If the repository stays in `umccr`, the connection's
-   GitHub App must be installed on the `umccr` organisation with access to it.
+   toolchain account must be able to read this repository. Because the source is `umccr/frontend-infrastructure-pipelines`,
+   the connection's GitHub App must be installed on the `umccr` organisation with access to this repository. This is the
+   remaining blocker to verify before cutover: if the connection cannot read the repo, the pipeline's Source stage fails.
 
 ## Cutover steps
 
@@ -41,16 +46,20 @@ Run these from the repository root with credentials for the toolchain account (`
 3. Check parity:
 
    ```sh
-   yarn install --immutable
-   yarn test
-   yarn cdk diff OrcaUIAppPipeline OrcaUIV2AppPipeline   # expect: no differences
-   yarn cdk diff OrcaUIInfrastructurePipeline            # expect: only source, trigger and buildspec changes
+   pnpm install --frozen-lockfile
+   pnpm test
+   pnpm cdk diff OrcaUIAppPipeline OrcaUIV2AppPipeline   # expect: no differences
+   pnpm cdk diff OrcaUIInfrastructurePipeline            # expect: only source owner (umccr), trigger paths and pnpm buildspec changes
    ```
+
+   If the app-pipeline diff is not empty, stop and investigate before deploying: the migration to pnpm and the
+   dependency bumps are only intended to change this repository's tooling and the infrastructure pipeline, not the
+   app pipelines. Asset-hash-only differences are acceptable; resource or configuration changes are not.
 
 4. Switch the infrastructure pipeline to this repository (one-time manual deploy):
 
    ```sh
-   yarn cdk deploy OrcaUIInfrastructurePipeline
+   pnpm cdk deploy OrcaUIInfrastructurePipeline
    ```
 
    Release a pipeline run and confirm it goes green. Self-mutation should be a no-op, and the beta, gamma and prod
@@ -82,5 +91,8 @@ cd orca-ui/deploy
 yarn install --immutable
 yarn cdk deploy OrcaUIInfrastructurePipeline
 ```
+
+These rollback commands intentionally use Yarn: they run against the legacy `orca-ui/deploy` code, which predates this
+repository's move to pnpm.
 
 After deletion, do the same from a checkout of `OrcaBus/orca-ui@3933ce5`.

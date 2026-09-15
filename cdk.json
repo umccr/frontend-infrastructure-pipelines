@@ -1,5 +1,5 @@
 {
-  "app": "yarn run -B ts-node bin/app.ts",
+  "app": "pnpm exec ts-node bin/app.ts",
   "watch": {
     "include": ["**"],
     "exclude": [
@@ -9,7 +9,7 @@
       "**/*.js",
       "tsconfig.json",
       "package*.json",
-      "yarn.lock",
+      "pnpm-lock.yaml",
       "node_modules",
       "test"
     ]

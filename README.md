@@ -35,12 +35,12 @@ Requires Node.js 22 (matching CodeBuild) and Corepack.
 
 ```sh
 corepack enable
-yarn install --immutable
+pnpm install --frozen-lockfile
 
-yarn test            # unit + cdk-nag tests
-yarn cdk ls          # list stacks
-yarn cdk synth       # synthesize all stacks
-yarn cdk diff <stack-id>
+pnpm test            # unit + cdk-nag tests
+pnpm cdk ls          # list stacks
+pnpm cdk synth       # synthesize all stacks
+pnpm cdk diff <stack-id>
 ```
 
 Deploying requires AWS credentials for the target account. See each frontend's docs for which stacks deploy
@@ -63,6 +63,6 @@ manually and which ones deploy through a self-mutating pipeline.
 
 - **Never rename deployed stack or construct IDs** without a migration plan. CDK treats a rename as delete + create,
   and several resources here use fixed physical names and `RemovalPolicy.DESTROY`.
-- Keep changes to shared files (`bin/`, `lib/common/`, `package.json`, `yarn.lock`, `cdk.json`) small and reviewed.
+- Keep changes to shared files (`bin/`, `lib/common/`, `package.json`, `pnpm-lock.yaml`, `cdk.json`) small and reviewed.
   They start every frontend's infrastructure pipeline.
-- Check a PR's effect with `yarn cdk diff` before merging to `main`.
+- Check a PR's effect with `pnpm cdk diff` before merging to `main`.

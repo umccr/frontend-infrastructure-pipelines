@@ -1,18 +1,17 @@
-import { App, Aspects, Stack } from 'aws-cdk-lib';
-import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
-import { SynthesisMessage } from '@aws-cdk/cloud-assembly-api';
+import { App } from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, test } from '@jest/globals';
-import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import { accountIdAlias, AppStage } from '../../lib/common/config';
 import { InfrastructureStack } from '../../lib/orcaui/infrastructure-stack';
 import {
   getInfrastructureStackConfig,
   v2CloudFrontBucketNameConfig,
 } from '../../lib/orcaui/config';
-
-function synthesisMessageToString(sm: SynthesisMessage): string {
-  return `${sm.entry.data} [${sm.id}]`;
-}
+import {
+  acknowledgeFindings,
+  addAwsSolutionsChecks,
+  expectNoUnacknowledgedFindings,
+} from './cdk-nag-helpers';
 
 type CfnResource = {
   Properties?: Record<string, unknown>;
@@ -26,12 +25,24 @@ type CloudFrontDistributionResource = {
   };
 };
 
+// AwsSolutions findings accepted for the OrcaUI InfrastructureStack.
+const ACCEPTED_INFRASTRUCTURE_RULES = [
+  'AwsSolutions-IAM4', // allow to use AWS managed policy
+  'AwsSolutions-IAM5', // wildcard scoped to the CloudFront bucket
+  'AwsSolutions-L1', // allow non latest lambda runtime
+  'AwsSolutions-S1', // no access logs required for now
+  'AwsSolutions-CFR1', // public access without geo restrictions
+  'AwsSolutions-CFR2', // WAF intentionally disabled
+  'AwsSolutions-CFR3', // no access logs required for now
+  'AwsSolutions-CFR7', // OAI pending migration to OAC
+];
+
 describe('cdk-nag-stack', () => {
   const app: App = new App({});
 
   const stack = new InfrastructureStack(app, 'InfrastructureStack', {
     env: {
-      account: '123456789',
+      account: '123456789012',
       region: 'ap-southeast-2',
     },
     tags: {
@@ -43,21 +54,15 @@ describe('cdk-nag-stack', () => {
 
   const stackId = stack.node.id;
 
-  Aspects.of(stack).add(new AwsSolutionsChecks());
-  applyNagSuppression(stackId, stack);
+  addAwsSolutionsChecks(stack);
+  acknowledgeFindings(
+    stack,
+    ACCEPTED_INFRASTRUCTURE_RULES,
+    'Accepted for OrcaUI hosting infrastructure'
+  );
 
-  test(`${stackId}: cdk-nag AwsSolutions Pack errors`, () => {
-    const errors = Annotations.fromStack(stack)
-      .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-      .map(synthesisMessageToString);
-    expect(errors).toHaveLength(0);
-  });
-
-  test(`${stackId}: cdk-nag AwsSolutions Pack warnings`, () => {
-    const warnings = Annotations.fromStack(stack)
-      .findWarning('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-      .map(synthesisMessageToString);
-    expect(warnings).toHaveLength(0);
+  test(`${stackId}: cdk-nag AwsSolutions Pack reports no unacknowledged findings`, () => {
+    expect(() => expectNoUnacknowledgedFindings(app)).not.toThrow();
   });
 
   test(`${stackId}: grants SecureString decrypt without CDK context lookup`, () => {
@@ -70,14 +75,14 @@ describe('cdk-nag-stack', () => {
             Action: 'kms:Decrypt',
             Condition: {
               StringEquals: {
-                'kms:CallerAccount': '123456789',
+                'kms:CallerAccount': '123456789012',
                 'kms:ViaService': 'ssm.ap-southeast-2.amazonaws.com',
               },
               'ForAnyValue:StringEquals': {
                 'kms:ResourceAliases': 'alias/aws/ssm',
               },
             },
-            Resource: 'arn:aws:kms:ap-southeast-2:123456789:key/*',
+            Resource: 'arn:aws:kms:ap-southeast-2:123456789012:key/*',
           }),
         ]),
       }),
@@ -191,97 +196,3 @@ describe('infrastructure-stack-v2-disabled-behavior', () => {
     });
   });
 });
-
-/**
- * apply nag suppression according to the relevant stackId
- * @param stackId the stackId
- * @param stack
- */
-function applyNagSuppression(stackId: string, stack: Stack) {
-  NagSuppressions.addStackSuppressions(
-    stack,
-    [
-      { id: 'AwsSolutions-IAM4', reason: 'allow to use AWS managed policy' },
-      { id: 'AwsSolutions-L1', reason: 'allow non latest lambda runtime' },
-    ],
-    true
-  );
-
-  switch (stackId) {
-    case 'InfrastructureStack':
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/InfrastructureStack/CloudFrontDistribution/Resource`,
-        [
-          {
-            id: 'AwsSolutions-CFR1',
-            reason: 'Allowing public access without Geo restrictions',
-          },
-          {
-            id: 'AwsSolutions-CFR2',
-            reason: 'Disable WAF',
-          },
-        ]
-      );
-
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/InfrastructureStack/EnvConfigLambda/ServiceRole/DefaultPolicy/Resource`,
-        [
-          {
-            id: 'AwsSolutions-IAM5',
-            reason: 'The asterisk in the resource ARN is specific only for the CF bucket',
-          },
-        ]
-      );
-
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/InfrastructureStack/OrcaUIAssetCloudFrontBucket/Resource`,
-        [
-          {
-            id: 'AwsSolutions-S1',
-            reason: 'No access logs required for now',
-          },
-        ]
-      );
-
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/InfrastructureStack/OrcaUIv2AssetCloudFrontBucket/Resource`,
-        [
-          {
-            id: 'AwsSolutions-S1',
-            reason: 'No access logs required for now',
-          },
-        ]
-      );
-
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/InfrastructureStack/CloudFrontDistribution/Resource`,
-        [
-          {
-            id: 'AwsSolutions-CFR3',
-            reason: 'No access logs required for now',
-          },
-        ]
-      );
-
-      NagSuppressions.addResourceSuppressionsByPath(
-        stack,
-        `/InfrastructureStack/CloudFrontDistribution/Resource`,
-        [
-          {
-            id: 'AwsSolutions-CFR7',
-            reason: 'TODO: Convert  origin access identity (OAI) to Origin Access Control (OAC)',
-          },
-        ]
-      );
-
-      break;
-
-    default:
-      break;
-  }
-}

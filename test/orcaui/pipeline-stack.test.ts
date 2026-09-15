@@ -1,14 +1,27 @@
-import { App, Aspects, Stack, StackProps } from 'aws-cdk-lib';
-import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
-import { SynthesisMessage } from '@aws-cdk/cloud-assembly-api';
+import { App, Stack, StackProps } from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, jest, test } from '@jest/globals';
-import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import type { Construct } from 'constructs';
 import { AppStage } from '../../lib/common/config';
 import { InfrastructureDeploymentStack } from '../../lib/orcaui/infrastructure-deployment-stack';
 import { OrcaUIAppPipelineStack } from '../../lib/orcaui/app-pipeline-stack';
 import { OrcaUIV2AppPipelineStack } from '../../lib/orcaui/v2-app-pipeline-stack';
 import { v2CloudFrontBucketNameConfig } from '../../lib/orcaui/config';
+import {
+  acknowledgeFindings,
+  addAwsSolutionsChecks,
+  expectNoUnacknowledgedFindings,
+} from './cdk-nag-helpers';
+
+// AwsSolutions findings accepted for the CDK-Pipelines-generated pipeline stacks.
+const ACCEPTED_PIPELINE_RULES = [
+  'AwsSolutions-IAM4',
+  'AwsSolutions-IAM5',
+  'AwsSolutions-S1',
+  'AwsSolutions-KMS5',
+  'AwsSolutions-CB3',
+  'AwsSolutions-CB4',
+];
 
 // we are mocking the infrastructure stack here, as we have a dedicated cdk-nag test for it
 jest.mock('../../lib/orcaui/infrastructure-stack', () => {
@@ -18,10 +31,6 @@ jest.mock('../../lib/orcaui/infrastructure-stack', () => {
     }),
   };
 });
-
-function synthesisMessageToString(sm: SynthesisMessage): string {
-  return `${sm.entry.data} [${sm.id}]`;
-}
 
 type PipelineStackConstructor = new (scope: App, id: string, props: StackProps) => Stack;
 type PipelineFilePaths = { Includes?: string[]; Excludes?: string[] };
@@ -86,8 +95,8 @@ const pipelineStacks: {
     stackId: 'TestInfrastructureDeploymentStack',
     StackClass: InfrastructureDeploymentStack,
     pipelineName: 'OrcaBus-OrcaUIInfrastructure',
-    // DeploymentStackPipeline hardcodes the `OrcaBus` owner; see the TODO in infrastructure-deployment-stack.ts
-    repository: 'OrcaBus/frontend-infrastructure-pipelines',
+    // Sourced from the umccr org via the githubOwner prop; see infrastructure-deployment-stack.ts
+    repository: 'umccr/frontend-infrastructure-pipelines',
     sourceActionName: 'pipeline-src',
     filePaths: {
       Includes: [
@@ -96,8 +105,7 @@ const pipelineStacks: {
         'lib/orcaui/**',
         'cdk.json',
         'package.json',
-        'yarn.lock',
-        '.yarnrc.yml',
+        'pnpm-lock.yaml',
         'tsconfig.json',
       ],
     },
@@ -140,33 +148,16 @@ describe.each(pipelineStacks)(
     const app: App = new App({});
     const stack = new StackClass(app, stackId, {
       env: {
-        account: '123456789',
+        account: '123456789012',
         region: 'ap-southeast-2',
       },
     });
 
-    Aspects.of(stack).add(new AwsSolutionsChecks());
-    NagSuppressions.addStackSuppressions(stack, [
-      { id: 'AwsSolutions-IAM4', reason: 'Allow CDK Pipeline' },
-      { id: 'AwsSolutions-IAM5', reason: 'Allow CDK Pipeline' },
-      { id: 'AwsSolutions-S1', reason: 'Allow CDK Pipeline' },
-      { id: 'AwsSolutions-KMS5', reason: 'Allow CDK Pipeline' },
-      { id: 'AwsSolutions-CB3', reason: 'Allow CDK Pipeline' },
-      { id: 'AwsSolutions-CB4', reason: 'Allow CDK Pipeline' },
-    ]);
+    addAwsSolutionsChecks(stack);
+    acknowledgeFindings(stack, ACCEPTED_PIPELINE_RULES, 'Allow CDK Pipeline');
 
-    test('cdk-nag AwsSolutions Pack errors', () => {
-      const errors = Annotations.fromStack(stack)
-        .findError('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-        .map(synthesisMessageToString);
-      expect(errors).toHaveLength(0);
-    });
-
-    test('cdk-nag AwsSolutions Pack warnings', () => {
-      const warnings = Annotations.fromStack(stack)
-        .findWarning('*', Match.stringLikeRegexp('AwsSolutions-.*'))
-        .map(synthesisMessageToString);
-      expect(warnings).toHaveLength(0);
+    test('cdk-nag AwsSolutions Pack reports no unacknowledged findings', () => {
+      expect(() => expectNoUnacknowledgedFindings(app)).not.toThrow();
     });
 
     test('synthesizes expected CodePipeline source, stages, and trigger', () => {
@@ -211,23 +202,23 @@ describe('InfrastructureDeploymentStack build command behavior', () => {
   const app: App = new App({});
   const stack = new InfrastructureDeploymentStack(app, 'TestInfrastructureBuildCommands', {
     env: {
-      account: '123456789',
+      account: '123456789012',
       region: 'ap-southeast-2',
     },
   });
 
-  test('uses root Yarn commands instead of default root pnpm commands', () => {
+  test('uses root pnpm commands', () => {
     const buildSpecs = getCodeBuildProjectBuildSpecs(Template.fromStack(stack)).join('\n');
 
     expect(buildSpecs).toContain('"corepack enable"');
-    expect(buildSpecs).toContain('"yarn --version"');
-    expect(buildSpecs).toContain('"yarn install --immutable"');
-    expect(buildSpecs).toContain('"yarn cdk synth"');
-    expect(buildSpecs).toContain('"yarn run test"');
+    expect(buildSpecs).toContain('"pnpm --version"');
+    expect(buildSpecs).toContain('"pnpm install --frozen-lockfile"');
+    expect(buildSpecs).toContain('"pnpm cdk synth"');
+    expect(buildSpecs).toContain('"pnpm run test"');
     expect(buildSpecs).not.toContain('--cwd deploy');
     expect(buildSpecs).not.toContain('"cd deploy"');
-    expect(buildSpecs).not.toContain('pnpm test');
-    expect(buildSpecs).not.toContain('pnpm install --frozen-lockfile');
+    expect(buildSpecs).not.toContain('"yarn install --immutable"');
+    expect(buildSpecs).not.toContain('"yarn cdk synth"');
   });
 });
 
@@ -235,7 +226,7 @@ describe('OrcaUIAppPipelineStack deployment behavior', () => {
   const app: App = new App({});
   const stack = new OrcaUIAppPipelineStack(app, 'TestOrcaUIAppDeploymentBehavior', {
     env: {
-      account: '123456789',
+      account: '123456789012',
       region: 'ap-southeast-2',
     },
   });
@@ -287,7 +278,7 @@ describe('OrcaUIV2AppPipelineStack deployment behavior', () => {
   const app: App = new App({});
   const stack = new OrcaUIV2AppPipelineStack(app, 'TestOrcaUIV2DeploymentBehavior', {
     env: {
-      account: '123456789',
+      account: '123456789012',
       region: 'ap-southeast-2',
     },
   });

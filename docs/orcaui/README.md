@@ -26,8 +26,8 @@ The CDK app is composed in [`bin/app.ts`](../../bin/app.ts) and creates three to
 
 Infrastructure changes flow through `OrcaUIInfrastructurePipeline`:
 
-1. A push to this repository on `main` that touches `lib/orcaui/**` or shared files (`bin/**`, `lib/common/**`, `package.json`, `yarn.lock`, `cdk.json`, ...) triggers the infrastructure pipeline. The exact list is `ORCAUI_INFRASTRUCTURE_FILE_PATHS` in [`infrastructure-deployment-stack.ts`](../../lib/orcaui/infrastructure-deployment-stack.ts).
-2. The pipeline installs dependencies at the repository root, runs the tests, and runs `yarn cdk synth`.
+1. A push to this repository on `main` that touches `lib/orcaui/**` or shared files (`bin/**`, `lib/common/**`, `package.json`, `pnpm-lock.yaml`, `cdk.json`, ...) triggers the infrastructure pipeline. The exact list is `ORCAUI_INFRASTRUCTURE_FILE_PATHS` in [`infrastructure-deployment-stack.ts`](../../lib/orcaui/infrastructure-deployment-stack.ts).
+2. The pipeline installs dependencies at the repository root, runs the tests, and runs `pnpm cdk synth`.
 3. CDK self-mutation updates the pipeline when needed.
 4. `InfrastructureStack` is deployed to beta, gamma, then prod. Gamma has a manual approval before promotion to prod.
 
@@ -106,19 +106,19 @@ Install dependencies:
 
 ```sh
 corepack enable
-yarn install --immutable
+pnpm install --frozen-lockfile
 ```
 
 Run tests:
 
 ```sh
-yarn test
+pnpm test
 ```
 
 List CDK stacks:
 
 ```sh
-yarn cdk ls
+pnpm cdk ls
 ```
 
 Example stack output:
@@ -135,17 +135,17 @@ OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusProd/OrcaUIInfrastructure
 Deploy the top-level pipeline stacks:
 
 ```sh
-yarn cdk deploy -e OrcaUIInfrastructurePipeline
-yarn cdk deploy -e OrcaUIAppPipeline
-yarn cdk deploy -e OrcaUIV2AppPipeline
+pnpm cdk deploy -e OrcaUIInfrastructurePipeline
+pnpm cdk deploy -e OrcaUIAppPipeline
+pnpm cdk deploy -e OrcaUIV2AppPipeline
 ```
 
 Work directly with the beta infrastructure stack:
 
 ```sh
-yarn cdk synth -e OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusBeta/OrcaUIInfrastructureStack
-yarn cdk diff -e OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusBeta/OrcaUIInfrastructureStack
-yarn cdk deploy -e OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusBeta/OrcaUIInfrastructureStack
+pnpm cdk synth -e OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusBeta/OrcaUIInfrastructureStack
+pnpm cdk diff -e OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusBeta/OrcaUIInfrastructureStack
+pnpm cdk deploy -e OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusBeta/OrcaUIInfrastructureStack
 ```
 
 Direct application stack deploys require AWS credentials for the target account and the usual CDK bootstrap roles.

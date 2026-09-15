@@ -25,10 +25,11 @@ jobs:
       - name: Install dependencies
         run: |
           corepack enable
-          yarn install --immutable
+          corepack prepare pnpm@10.34.5 --activate
+          pnpm install --frozen-lockfile
 
       - name: Test
-        run: yarn test
+        run: pnpm test
 
       - name: Synth
-        run: yarn cdk synth --quiet
+        run: pnpm cdk synth --quiet
