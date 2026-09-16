@@ -26,35 +26,42 @@ from one repository.
 
 ## Blockers to resolve before cutover
 
-1. **GitHub owner. (Resolved.)** `DeploymentStackPipeline` used to hardcode the `OrcaBus/<githubRepo>` source owner.
-   As of `@orcabus/platform-cdk-constructs@1.9.8` it accepts a `githubOwner` prop (default `OrcaBus`), and
-   [`lib/orcaui/infrastructure-deployment-stack.ts`](../lib/orcaui/infrastructure-deployment-stack.ts) sets
-   `githubOwner: 'umccr'`. The pipeline now synthesizes a source of `umccr/frontend-infrastructure-pipelines`. No
-   further action is needed here unless the repository moves organisations.
-2. **CodeStar connection access.** The connection referenced by the `codestar_github_arn` SSM parameter in the
-   toolchain account must be able to read this repository. Because the source is `umccr/frontend-infrastructure-pipelines`,
-   the connection's GitHub App must be installed on the `umccr` organisation with access to this repository. This is the
-   remaining blocker to verify before cutover: if the connection cannot read the repo, the pipeline's Source stage fails.
+- [x] **GitHub owner. (Done.)** `DeploymentStackPipeline` used to hardcode the `OrcaBus/<githubRepo>` source owner.
+      As of `@orcabus/platform-cdk-constructs@1.9.8` it accepts a `githubOwner` prop (default `OrcaBus`), and
+      [`lib/orcaui/infrastructure-deployment-stack.ts`](../lib/orcaui/infrastructure-deployment-stack.ts) sets
+      `githubOwner: 'umccr'`. The pipeline now synthesizes a source of `umccr/frontend-infrastructure-pipelines`. No
+      further action is needed here unless the repository moves organisations.
+- [x] **CodeStar connection access. (Done.)** The connection referenced by the `codestar_github_arn` SSM parameter in
+      the toolchain account can read `umccr/frontend-infrastructure-pipelines`; the connection's GitHub App is installed on
+      the `umccr` organisation with access to this repository. Re-verify only if the connection or repository ownership
+      changes: if the connection cannot read the repo, the pipeline's Source stage fails.
 
 ## Cutover steps
 
 Run these from the repository root with credentials for the toolchain account (`383856791668`).
 
 1. Merge this repository's `init` branch into `main`.
-2. Freeze changes to `deploy/` in `orca-ui`. From here until step 5, no PR touching `deploy/**` should merge there,
+2. Freeze changes to `deploy/` in `orca-ui`. From here until step 6, no PR touching `deploy/**` should merge there,
    or the old pipeline could self-mutate back to the `orca-ui` source.
 3. Check parity:
 
    ```sh
    pnpm install --frozen-lockfile
    pnpm test
-   pnpm cdk diff OrcaUIAppPipeline OrcaUIV2AppPipeline   # expect: no differences
+   pnpm cdk diff OrcaUIAppPipeline OrcaUIV2AppPipeline   # expect: only the gamma OpenAPI type-check env-var catch-up (see below)
    pnpm cdk diff OrcaUIInfrastructurePipeline            # expect: only source owner (umccr), trigger paths and pnpm buildspec changes
    ```
 
-   If the app-pipeline diff is not empty, stop and investigate before deploying: the migration to pnpm and the
-   dependency bumps are only intended to change this repository's tooling and the infrastructure pipeline, not the
-   app pipelines. Asset-hash-only differences are acceptable; resource or configuration changes are not.
+   The app-pipeline diff is currently **not empty**, but the difference is expected and safe. It adds two environment
+   variables (`VITE_SYSTEM_CATALOG_URL`, `VITE_DEPLOY_STATUS_URL`, both pointing at STG) to the gamma
+   `OpenApiTSCheck` / `OrcaUIV2OpenApiTSCheck` CodeBuild projects. Those values already exist in
+   [`lib/orcaui/config.ts`](../lib/orcaui/config.ts); the deployed app pipelines simply predate that config change, so
+   this is config catch-up rather than a change introduced by the pnpm/dependency work. The affected CodeBuild project
+   is the **gamma type-check gate only** — it validates types against the STG OpenAPI schema and never builds or
+   uploads a production bundle. See the app-pipeline drift item in step 5.
+
+   If the app-pipeline diff shows anything **other** than these two env vars (for example changes to install/build
+   commands, S3 sync, Lambda invocation, IAM roles, stages, or triggers), stop and investigate before deploying.
 
 4. Switch the infrastructure pipeline to this repository (one-time manual deploy):
 
@@ -65,7 +72,31 @@ Run these from the repository root with credentials for the toolchain account (`
    Release a pipeline run and confirm it goes green. Self-mutation should be a no-op, and the beta, gamma and prod
    `OrcaUIInfrastructureStack` deployments should report no changes.
 
-5. In `orca-ui`, open a PR that:
+5. Align the app pipelines with `config.ts` (app-pipeline drift — deferred).
+
+   `cdk diff` on `OrcaUIAppPipeline` / `OrcaUIV2AppPipeline` shows the two-env-var catch-up described in step 3. This
+   is **deferred** and will be deployed during an off-hours window (no active users) together with release testing,
+   to keep the production page stable in the meantime.
+
+   Deploying these stacks is low risk and does **not** release the page:
+   - The app pipeline stacks are plain CodePipeline stacks and are **not self-mutating**. `cdk deploy` only updates the
+     CloudFormation resources (the gamma type-check CodeBuild project's env vars); it does not start a pipeline
+     execution.
+   - A release only happens on a push to `OrcaBus/orca-ui` / `orca-ui-v2` `main`, or a manual "Release change".
+   - Even on the next natural pipeline run, only the gamma type-check step is affected, and prod is gated behind a
+     manual approval action.
+
+   When ready (off-hours):
+
+   ```sh
+   pnpm cdk deploy OrcaUIAppPipeline OrcaUIV2AppPipeline
+   ```
+
+   Then do release testing: trigger a pipeline run (or wait for the next app push), confirm the gamma
+   `TSCheckWithStgOpenAPI` step passes with the new env vars, promote through the manual approval, and verify the
+   beta/gamma/prod pages load and serve the expected `env.js`.
+
+6. In `orca-ui`, open a PR that:
    - deletes `deploy/`;
    - removes the `deploy/cdk.out` / `deploy/.gitignore` references from the `lint` and `prettier-*` scripts in
      `package.json`;

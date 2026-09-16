@@ -1,5 +1,5 @@
 import { App, Stack, StackProps } from 'aws-cdk-lib';
-import { Match, Template } from 'aws-cdk-lib/assertions';
+import { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, jest, test } from '@jest/globals';
 import type { Construct } from 'constructs';
 import { AppStage } from '../../lib/common/config';
@@ -418,7 +418,7 @@ function getIamRoleProperties(template: Template, logicalIdPrefix: string): IamR
   )?.[1];
 
   expect(role).toBeDefined();
-  return cfnResourceProperties(role) as IamRoleProperties;
+  return cfnResourceProperties(role);
 }
 
 function cfnResourceProperties(resource: unknown): Record<string, unknown> {

@@ -8,9 +8,9 @@ and prod (`472057503814`) in `ap-southeast-2`.
 
 ## Frontends
 
-| Frontend | App repositories                          | Source                          | Docs                                       |
-| -------- | ----------------------------------------- | ------------------------------- | ------------------------------------------ |
-| OrcaUI   | `OrcaBus/orca-ui`, `OrcaBus/orca-ui-v2`   | [`lib/orcaui/`](lib/orcaui/)    | [`docs/orcaui/`](docs/orcaui/README.md)    |
+| Frontend | App repositories                        | Source                       | Docs                                    |
+| -------- | --------------------------------------- | ---------------------------- | --------------------------------------- |
+| OrcaUI   | `OrcaBus/orca-ui`, `OrcaBus/orca-ui-v2` | [`lib/orcaui/`](lib/orcaui/) | [`docs/orcaui/`](docs/orcaui/README.md) |
 
 OrcaUI was migrated from `OrcaBus/orca-ui` `deploy/`. See
 [`docs/migration-from-orca-ui.md`](docs/migration-from-orca-ui.md).

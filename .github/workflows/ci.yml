@@ -33,3 +33,40 @@ jobs:
 
       - name: Synth
         run: pnpm cdk synth --quiet
+
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.5 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Runs the repo-hygiene and secret-scanning hooks. The eslint, prettier and
+      # test hooks are skipped here because the test-and-synth and lint-and-format
+      # jobs already cover them (and avoid needing Node/pnpm in this job).
+      - uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: eslint,prettier,pnpm-test

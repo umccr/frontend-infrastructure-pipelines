@@ -1,0 +1,19 @@
+# Dependencies and build output
+node_modules
+cdk.out
+.cdk.staging
+
+# Lock files
+pnpm-lock.yaml
+
+# Generated / cache
+coverage
+.pnpm-store
+
+# Compiled output
+*.js
+*.d.ts
+
+# Editor and OS
+.DS_Store
+*.sw?
