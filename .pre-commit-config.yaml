@@ -30,7 +30,10 @@ repos:
         entry: pnpm lint
         language: system
         pass_filenames: false
-        files: \.[jt]s$
+        # Match every extension eslint.config.mjs lints (js/cjs/mjs/ts/cts/mts),
+        # so editing the ESLint config itself also triggers the hook. tsconfig is
+        # included because the type-checked rules resolve through it.
+        files: \.[cm]?[jt]s$|^tsconfig.*\.json$
 
       - id: prettier
         name: prettier format
@@ -43,5 +46,6 @@ repos:
         entry: pnpm test
         language: system
         pass_filenames: false
-        # Only run when source, tests, config or lockfile change.
-        files: \.(ts|json|ya?ml)$|^pnpm-lock\.yaml$
+        # Only run when source, tests, config (incl. jest.config.js) or the
+        # lockfile change. \.ya?ml$ already covers pnpm-lock.yaml.
+        files: \.([cm]?[jt]s|json|ya?ml)$
