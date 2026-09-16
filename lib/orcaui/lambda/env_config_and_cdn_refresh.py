@@ -90,7 +90,7 @@ def handler(event, context):
         'VITE_CASE_API_VERSION': os.environ.get('VITE_CASE_API_VERSION', None),
         'VITE_SYSTEM_CATALOG_API_VERSION': os.environ.get('VITE_SYSTEM_CATALOG_API_VERSION', None),
         'VITE_DEPLOY_STATUS_API_VERSION': os.environ.get('VITE_DEPLOY_STATUS_API_VERSION', None),
-        
+
     }
     # Remove null values
     env_vars = {k: v for k, v in env_vars.items() if v is not None}
