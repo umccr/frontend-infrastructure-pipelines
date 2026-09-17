@@ -6,19 +6,30 @@ import { getInfrastructureStackConfig } from './config';
 import { Stack, StackProps } from 'aws-cdk-lib';
 
 /**
- * Repository paths that start the OrcaUI infrastructure pipeline when changed on `main`.
- * Shared files are included because they affect every frontend; other frontends' folders are not.
+ * Repository paths that start the portal infrastructure pipeline when changed on `main`.
+ *
+ * `lib/portal/**` holds the hosting stack shared by every frontend (buckets, CloudFront, DNS,
+ * env config Lambda), so it must be included. The per-app folders (`lib/orcaui/**`, `lib/hub/**`,
+ * ...) only contain app CI/CD pipeline stacks, which are deployed separately, so they are
+ * deliberately excluded: an app pipeline change must not redeploy shared hosting infrastructure.
  */
-export const ORCAUI_INFRASTRUCTURE_FILE_PATHS = [
+export const PORTAL_INFRASTRUCTURE_FILE_PATHS = [
   'bin/**',
   'lib/common/**',
-  'lib/orcaui/**',
+  'lib/portal/**',
   'cdk.json',
   'package.json',
   'pnpm-lock.yaml',
   'tsconfig.json',
 ];
 
+/**
+ * Self-mutating pipeline that deploys the shared portal hosting stack to every stage.
+ *
+ * The `OrcaUI*` physical names below predate Hub and OrcaHouse joining the same distribution.
+ * They are deployed resource identities, so they stay as-is: renaming them would replace the
+ * pipeline and the hosting stack. See "Conventions" in the repository README.
+ */
 export class InfrastructureDeploymentStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
@@ -41,7 +52,7 @@ export class InfrastructureDeploymentStack extends Stack {
       // Migration from orcabus to umccr org. See docs/migration-from-orca-ui.md.
       githubOwner: 'umccr',
       githubRepo: 'frontend-infrastructure-pipelines',
-      includedFilePaths: ORCAUI_INFRASTRUCTURE_FILE_PATHS,
+      includedFilePaths: PORTAL_INFRASTRUCTURE_FILE_PATHS,
       stack: InfrastructureStack,
       stackName: 'OrcaUIInfrastructureStack',
       stackConfig: {

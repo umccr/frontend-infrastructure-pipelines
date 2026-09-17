@@ -16,3 +16,8 @@ cdk.out
 
 # OS
 .DS_Store
+
+# Python bytecode. Important: lib/portal/lambda/ is bundled by Code.fromAsset, so a stray
+# __pycache__ there would be uploaded with the function and change its asset hash.
+__pycache__/
+*.py[cod]
