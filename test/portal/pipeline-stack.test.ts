@@ -3,15 +3,15 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, jest, test } from '@jest/globals';
 import type { Construct } from 'constructs';
 import { AppStage } from '../../lib/common/config';
-import { InfrastructureDeploymentStack } from '../../lib/orcaui/infrastructure-deployment-stack';
+import { InfrastructureDeploymentStack } from '../../lib/portal/infrastructure-deployment-stack';
 import { OrcaUIAppPipelineStack } from '../../lib/orcaui/app-pipeline-stack';
 import { OrcaUIV2AppPipelineStack } from '../../lib/orcaui/v2-app-pipeline-stack';
-import { v2CloudFrontBucketNameConfig } from '../../lib/orcaui/config';
+import { ORCAUI_V2_APP } from '../../lib/portal/apps';
 import {
   acknowledgeFindings,
   addAwsSolutionsChecks,
   expectNoUnacknowledgedFindings,
-} from './cdk-nag-helpers';
+} from '../common/cdk-nag-helpers';
 
 // AwsSolutions findings accepted for the CDK-Pipelines-generated pipeline stacks.
 const ACCEPTED_PIPELINE_RULES = [
@@ -24,7 +24,7 @@ const ACCEPTED_PIPELINE_RULES = [
 ];
 
 // we are mocking the infrastructure stack here, as we have a dedicated cdk-nag test for it
-jest.mock('../../lib/orcaui/infrastructure-stack', () => {
+jest.mock('../../lib/portal/infrastructure-stack', () => {
   return {
     InfrastructureStack: jest.fn((value: Construct) => {
       return new Stack(value, 'mockStack', {});
@@ -70,7 +70,7 @@ type IamRoleProperties = {
 };
 
 const configuredV2DeployStages = Object.values(AppStage).flatMap((appStage) => {
-  if (!v2CloudFrontBucketNameConfig[appStage]) {
+  if (!ORCAUI_V2_APP.bucketName[appStage]) {
     return [];
   }
 
@@ -98,11 +98,14 @@ const pipelineStacks: {
     // Sourced from the umccr org via the githubOwner prop; see infrastructure-deployment-stack.ts
     repository: 'umccr/frontend-infrastructure-pipelines',
     sourceActionName: 'pipeline-src',
+    // Listed literally rather than reusing PORTAL_INFRASTRUCTURE_FILE_PATHS so that changing the
+    // trigger paths is a deliberate, reviewed edit. `lib/portal/**` must be present: it holds the
+    // hosting stack this pipeline deploys. Per-app folders must stay out.
     filePaths: {
       Includes: [
         'bin/**',
         'lib/common/**',
-        'lib/orcaui/**',
+        'lib/portal/**',
         'cdk.json',
         'package.json',
         'pnpm-lock.yaml',
@@ -297,7 +300,7 @@ describe('OrcaUIV2AppPipelineStack deployment behavior', () => {
   test('deploys configured v2 stages under the v2 bucket prefix', () => {
     const codeBuildProjects = getCodeBuildProjectPropertiesByName(Template.fromStack(stack));
     const configuredStages = Object.values(AppStage).filter(
-      (appStage) => v2CloudFrontBucketNameConfig[appStage]
+      (appStage) => ORCAUI_V2_APP.bucketName[appStage]
     );
 
     for (const appStage of configuredStages) {
@@ -313,7 +316,7 @@ describe('OrcaUIV2AppPipelineStack deployment behavior', () => {
         expect.arrayContaining([
           expect.objectContaining({
             Name: 'DESTINATION_BUCKET_NAME',
-            Value: v2CloudFrontBucketNameConfig[appStage],
+            Value: ORCAUI_V2_APP.bucketName[appStage],
           }),
         ])
       );
@@ -342,7 +345,7 @@ describe('OrcaUIV2AppPipelineStack deployment behavior', () => {
   test('v2 deploy roles are only assumable by CodeBuild', () => {
     const template = Template.fromStack(stack);
     const configuredStages = Object.values(AppStage).filter(
-      (appStage) => v2CloudFrontBucketNameConfig[appStage]
+      (appStage) => ORCAUI_V2_APP.bucketName[appStage]
     );
 
     for (const appStage of configuredStages) {

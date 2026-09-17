@@ -16,7 +16,7 @@ from one repository.
 - The only intended differences are in `OrcaUIInfrastructurePipeline` (the self-mutating `OrcaBus-OrcaUIInfrastructure`
   CodePipeline):
   - source repository `OrcaBus/orca-ui` → `umccr/frontend-infrastructure-pipelines`
-  - trigger file paths `deploy/**` → shared files + `lib/orcaui/**`
+  - trigger file paths `deploy/**` → shared files + `lib/portal/**`
   - synth/test commands run from the repository root instead of `--cwd deploy`, and use pnpm instead of Yarn
     (`pnpm install --frozen-lockfile`, `pnpm cdk synth`, `pnpm run test`)
 
@@ -28,7 +28,7 @@ from one repository.
 
 - [x] **GitHub owner. (Done.)** `DeploymentStackPipeline` used to hardcode the `OrcaBus/<githubRepo>` source owner.
       As of `@orcabus/platform-cdk-constructs@1.9.8` it accepts a `githubOwner` prop (default `OrcaBus`), and
-      [`lib/orcaui/infrastructure-deployment-stack.ts`](../lib/orcaui/infrastructure-deployment-stack.ts) sets
+      [`lib/portal/infrastructure-deployment-stack.ts`](../lib/portal/infrastructure-deployment-stack.ts) sets
       `githubOwner: 'umccr'`. The pipeline now synthesizes a source of `umccr/frontend-infrastructure-pipelines`. No
       further action is needed here unless the repository moves organisations.
 - [x] **CodeStar connection access. (Done.)** The connection referenced by the `codestar_github_arn` SSM parameter in
@@ -55,7 +55,7 @@ Run these from the repository root with credentials for the toolchain account (`
    The app-pipeline diff is currently **not empty**, but the difference is expected and safe. It adds two environment
    variables (`VITE_SYSTEM_CATALOG_URL`, `VITE_DEPLOY_STATUS_URL`, both pointing at STG) to the gamma
    `OpenApiTSCheck` / `OrcaUIV2OpenApiTSCheck` CodeBuild projects. Those values already exist in
-   [`lib/orcaui/config.ts`](../lib/orcaui/config.ts); the deployed app pipelines simply predate that config change, so
+   [`lib/portal/config.ts`](../lib/portal/config.ts); the deployed app pipelines simply predate that config change, so
    this is config catch-up rather than a change introduced by the pnpm/dependency work. The affected CodeBuild project
    is the **gamma type-check gate only** — it validates types against the STG OpenAPI schema and never builds or
    uploads a production bundle. See the app-pipeline drift item in step 5.
