@@ -57,7 +57,42 @@ merge, and empty-value handling. A real `pnpm build` should show every absolute 
 `/hub/`, no un-prefixed `/assets/…` in the bundle, the OAuth redirect building as `${origin}/hub/`, and
 no `VITE_OAUTH_REDIRECT_*` references.
 
+## Pipeline stack
+
+[`lib/portal/hub/app-pipeline-stack.ts`](../../lib/portal/hub/app-pipeline-stack.ts) defines
+`HubAppPipelineStack`, the `HubAppCICDPipeline` that builds [`umccr/hub`](https://github.com/umccr/hub)
+and deploys it to `portal.<stage>.umccr.org/hub/`. It is a thin configuration wrapper around the shared
+[`PortalAppPipeline`](../../lib/portal/infra/app-pipeline.ts) construct:
+
+```ts
+new PortalAppPipeline(this, 'HubAppPipeline', {
+  app: HUB_APP, // registry entry in lib/portal/infra/apps.ts
+  namePrefix: 'Hub',
+  buildCommands: ['pnpm build'],
+  artifactBaseDirectory: 'build/', // React SPA output, synced to s3://<bucket>/hub/
+});
+```
+
+Hosting (S3 bucket, CloudFront behaviour, DNS, `env.js`) is **not** defined here. It belongs to the
+shared portal infrastructure in [`lib/portal/infra/`](../../lib/portal/infra/); Hub's registry entry is
+`HUB_APP` in [`lib/portal/infra/apps.ts`](../../lib/portal/infra/apps.ts), which also decides which
+stages exist — currently beta and prod, with no gamma.
+
+For the full app-repo checklist (base path, artifact directory, routing mode, `env.js`, caching) and
+why each item matters, see [`docs/portal/onboarding-an-app.md`](../portal/onboarding-an-app.md).
+
+## Deploying
+
+The pipeline stack is **not** self-mutating: `cdk deploy` updates the pipeline definition without
+starting a release. A release runs when `umccr/hub` `main` changes. Deploy the pipeline from the
+toolchain account:
+
+```sh
+pnpm cdk diff HubAppPipeline    # review the change first
+pnpm cdk deploy HubAppPipeline
+```
+
 ## Related
 
-- `umccr/frontend-infrastructure-pipelines` — portal hosting + `HubAppCICDPipeline`.
+- `umccr/frontend-infrastructure-pipelines` — portal hosting + `HubAppCICDPipeline` (this repo).
 - `umccr/infrastructure` `cognito_aai` — the `/hub/` callback URL. **Apply before Hub deploys.**

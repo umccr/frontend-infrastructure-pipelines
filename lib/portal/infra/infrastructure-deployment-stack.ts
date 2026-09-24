@@ -1,18 +1,23 @@
 import { Construct } from 'constructs';
 import { DeploymentStackPipeline } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
 import { InfrastructureStack } from './infrastructure-stack';
-import { AppStage } from '../common/config';
+import { AppStage } from '../../common/config';
 import { getInfrastructureStackConfig } from './config';
 import { Stack, StackProps } from 'aws-cdk-lib';
 
 /**
- * Repository paths that start the OrcaUI infrastructure pipeline when changed on `main`.
- * Shared files are included because they affect every frontend; other frontends' folders are not.
+ * Repository paths that start the portal infrastructure pipeline when changed on `main`.
+ *
+ * `lib/portal/infra/**` holds the hosting stack shared by every frontend (buckets, CloudFront,
+ * DNS, env config Lambda), so it must be included. The per-app folders (`lib/portal/orcaui/**`,
+ * `lib/portal/hub/**`, ...) only contain app CI/CD pipeline stacks, which are deployed separately,
+ * so they are deliberately NOT matched here: an app pipeline change must not redeploy shared
+ * hosting infrastructure.
  */
-export const ORCAUI_INFRASTRUCTURE_FILE_PATHS = [
+export const PORTAL_INFRASTRUCTURE_FILE_PATHS = [
   'bin/**',
   'lib/common/**',
-  'lib/orcaui/**',
+  'lib/portal/infra/**',
   'cdk.json',
   'package.json',
   'pnpm-lock.yaml',
@@ -20,11 +25,11 @@ export const ORCAUI_INFRASTRUCTURE_FILE_PATHS = [
 ];
 
 /**
- * Documentation-only paths that must NOT start the OrcaUI infrastructure pipeline.
+ * Documentation-only paths that must NOT start the portal infrastructure pipeline.
  * These never affect a synthesized template, so a docs-only change shouldn't deploy.
  * Excludes win over includes, so e.g. `docs/**` here overrides an included folder's `README`.
  */
-export const ORCAUI_INFRASTRUCTURE_EXCLUDED_FILE_PATHS = [
+export const INFRASTRUCTURE_EXCLUDED_FILE_PATHS = [
   'docs/**',
   '**/*.md',
   '**/README*',
@@ -32,6 +37,13 @@ export const ORCAUI_INFRASTRUCTURE_EXCLUDED_FILE_PATHS = [
   '**/LICENSE',
 ];
 
+/**
+ * Self-mutating pipeline that deploys the shared portal hosting stack to every stage.
+ *
+ * The `OrcaUI*` physical names below predate Hub and OrcaHouse joining the same distribution.
+ * They are deployed resource identities, so they stay as-is: renaming them would replace the
+ * pipeline and the hosting stack. See "Conventions" in the repository README.
+ */
 export class InfrastructureDeploymentStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
@@ -54,8 +66,8 @@ export class InfrastructureDeploymentStack extends Stack {
       // Migration from orcabus to umccr org. See docs/migration-from-orca-ui.md.
       githubOwner: 'umccr',
       githubRepo: 'frontend-infrastructure-pipelines',
-      includedFilePaths: ORCAUI_INFRASTRUCTURE_FILE_PATHS,
-      excludedFilePaths: ORCAUI_INFRASTRUCTURE_EXCLUDED_FILE_PATHS,
+      includedFilePaths: PORTAL_INFRASTRUCTURE_FILE_PATHS,
+      excludedFilePaths: INFRASTRUCTURE_EXCLUDED_FILE_PATHS,
       stack: InfrastructureStack,
       stackName: 'OrcaUIInfrastructureStack',
       stackConfig: {

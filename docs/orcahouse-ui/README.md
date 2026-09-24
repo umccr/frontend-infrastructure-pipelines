@@ -58,8 +58,49 @@ A real `pnpm build` should show:
 
 `pnpm type-check`, `pnpm lint`, `pnpm format:check` should be clean.
 
+## Pipeline stack
+
+[`lib/portal/orcahouse/app-pipeline-stack.ts`](../../lib/portal/orcahouse/app-pipeline-stack.ts)
+defines `OrcaHouseAppPipelineStack`, the `OrcaHouseAppCICDPipeline` that builds
+[`umccr/orcahouse-ui`](https://github.com/umccr/orcahouse-ui) and deploys it to
+`portal.<stage>.umccr.org/orcahouse/`. It is a thin configuration wrapper around the shared
+[`PortalAppPipeline`](../../lib/portal/infra/app-pipeline.ts) construct:
+
+```ts
+new PortalAppPipeline(this, 'OrcaHouseAppPipeline', {
+  app: ORCAHOUSE_APP, // registry entry in lib/portal/infra/apps.ts
+  namePrefix: 'OrcaHouse',
+  buildCommands: ['pnpm build'],
+  artifactBaseDirectory: 'out/', // Next.js static export, NOT .next/
+  additionalNeverCacheGlobs: ['*.txt'], // App Router RSC payloads, fetched by stable name
+});
+```
+
+The required `next.config` for the static export (`output: 'export'`, `trailingSlash: true`,
+`basePath`/`assetPrefix: '/orcahouse'`) is documented under
+[Requirements on a shared domain](#requirements-on-a-shared-domain) above and in the
+[onboarding guide](../portal/onboarding-an-app.md#nextjs-needs-a-static-export). `output: 'export'`
+rules out SSR, API routes, middleware and ISR; if OrcaHouse needs any of them it cannot be hosted on
+the portal distribution as-is.
+
+Hosting (S3 bucket, CloudFront behaviour, DNS, `env.js`) is **not** defined here. It belongs to the
+shared portal infrastructure in [`lib/portal/infra/`](../../lib/portal/infra/); OrcaHouse's registry
+entry is `ORCAHOUSE_APP` in [`lib/portal/infra/apps.ts`](../../lib/portal/infra/apps.ts), which also
+decides which stages exist — currently beta and prod, with no gamma.
+
+## Deploying
+
+The pipeline stack is **not** self-mutating: `cdk deploy` updates the pipeline definition without
+starting a release. A release runs when `umccr/orcahouse-ui` `main` changes. Deploy the pipeline from
+the toolchain account:
+
+```sh
+pnpm cdk diff OrcaHouseAppPipeline    # review the change first
+pnpm cdk deploy OrcaHouseAppPipeline
+```
+
 ## Related
 
-- `umccr/frontend-infrastructure-pipelines` — portal hosting + `OrcaHouseAppCICDPipeline`.
+- `umccr/frontend-infrastructure-pipelines` — portal hosting + `OrcaHouseAppCICDPipeline` (this repo).
 - `umccr/infrastructure` `cognito_aai` — the `/orcahouse/` callback URL. **Apply before OrcaHouse
   deploys.**

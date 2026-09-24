@@ -17,7 +17,7 @@ so every one of those URLs must be registered on the app client, or sign-in is r
 ## Layout
 
 - `portal_apps.tf` — a single `portal_app_paths` local listing the path prefixes (`""`, `/v2/`,
-  `/hub/`, `/orcahouse/`), shared by both app clients. This mirrors `pathPrefix` in `lib/portal/apps.ts`
+  `/hub/`, `/orcahouse/`), shared by both app clients. This mirrors `pathPrefix` in `lib/portal/infra/apps.ts`
   of `umccr/frontend-infrastructure-pipelines`; the two must stay in step.
 - `app_orcaui.tf` — `callback_urls` / `logout_urls` are the product of the workspace's origins and
   `portal_app_paths` (via `setproduct`). The `""` path reproduces the original single root URL, so the

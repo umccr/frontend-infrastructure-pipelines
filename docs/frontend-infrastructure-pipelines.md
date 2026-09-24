@@ -27,7 +27,7 @@ record. Hub and OrcaHouse intentionally have no gamma stage (tracked as a gamma 
 
 ## Key design points
 
-- **`lib/portal/apps.ts` is the single source of truth.** Each app declares `id`, `pathPrefix`, `repo`,
+- **`lib/portal/infra/apps.ts` is the single source of truth.** Each app declares `id`, `pathPrefix`, `repo`,
   `clientRouting` mode and per-stage bucket names. The hosting stack derives the bucket, the
   `/<prefix>/*` CloudFront behaviour, the SPA-rewrite entry and the `env.js` target from it, so a
   prefix is registered in exactly one place and a behaviour cannot drift from its rewrite rule.
@@ -61,11 +61,13 @@ still synthesize. Never rename a deployed stack or construct ID without a migrat
 ├── bin/app.ts              # CDK entrypoint; registers every frontend's stacks
 ├── lib/
 │   ├── common/             # Org-wide constants (accounts, region, stages)
-│   ├── portal/             # Shared hosting: registry (apps.ts), PortalAppPipeline, infra stack, config Lambda
-│   ├── hub/                # Hub app pipeline stack
-│   ├── orcahouse/          # OrcaHouse app pipeline stack
-│   └── orcaui/             # OrcaUI + v2 app pipelines
-├── test/                   # Tests mirror lib/
+│   └── portal/             # Everything for portal.<stage>.umccr.org
+│       ├── infra/          # Shared hosting: registry (apps.ts), config, PortalAppPipeline,
+│       │                   #   infrastructure stacks, env config Lambda + SPA rewrite function
+│       ├── orcaui/         # OrcaUI + v2 app pipeline stacks
+│       ├── hub/            # Hub app pipeline stack
+│       └── orcahouse/      # OrcaHouse app pipeline stack
+├── test/                   # Tests mirror lib/portal/
 └── docs/                   # Per-frontend runbooks and design notes
 ```
 

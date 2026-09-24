@@ -15,12 +15,11 @@ import {
 import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { accountIdAlias, AppStage, REGION } from '../common/config';
-import {
-  configLambdaNameConfig,
-  getInfrastructureStackConfig,
-  v2CloudFrontBucketNameConfig,
-} from './config';
+import { accountIdAlias, AppStage, REGION } from '../../common/config';
+import { ORCAUI_V2_APP } from '../infra/apps';
+import { configLambdaNameConfig, getInfrastructureStackConfig } from '../infra/config';
+
+const v2BucketName = ORCAUI_V2_APP.bucketName;
 
 export class OrcaUIV2AppPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
@@ -64,7 +63,7 @@ export class OrcaUIV2AppPipelineStack extends Stack {
     });
 
     const deployProject = (env: AppStage) => {
-      const destinationBucketName = v2CloudFrontBucketNameConfig[env];
+      const destinationBucketName = v2BucketName[env];
       if (!destinationBucketName) {
         throw new Error(`V2 CloudFront bucket is not configured for ${env}`);
       }
@@ -129,7 +128,7 @@ export class OrcaUIV2AppPipelineStack extends Stack {
     };
 
     const gammaConfig = getInfrastructureStackConfig(AppStage.GAMMA);
-    const openApiTsCheck = v2CloudFrontBucketNameConfig[AppStage.GAMMA]
+    const openApiTsCheck = v2BucketName[AppStage.GAMMA]
       ? new PipelineProject(this, 'OrcaUIV2OpenApiTSCheck', {
           projectName: 'OrcaUIV2-OpenApiTSCheck',
           description: 'Test Orca UI v2 artifact with OpenAPI schema from relevant STG stage.',
@@ -186,7 +185,7 @@ export class OrcaUIV2AppPipelineStack extends Stack {
       },
     ];
 
-    if (v2CloudFrontBucketNameConfig[AppStage.BETA]) {
+    if (v2BucketName[AppStage.BETA]) {
       stages.push({
         stageName: 'DeployToBeta',
         actions: [
@@ -199,7 +198,7 @@ export class OrcaUIV2AppPipelineStack extends Stack {
       });
     }
 
-    if (v2CloudFrontBucketNameConfig[AppStage.GAMMA]) {
+    if (v2BucketName[AppStage.GAMMA]) {
       stages.push({
         stageName: 'DeployToGamma',
         actions: [
@@ -219,7 +218,7 @@ export class OrcaUIV2AppPipelineStack extends Stack {
       });
     }
 
-    if (v2CloudFrontBucketNameConfig[AppStage.PROD]) {
+    if (v2BucketName[AppStage.PROD]) {
       stages.push({
         stageName: 'DeployToProdApproval',
         actions: [

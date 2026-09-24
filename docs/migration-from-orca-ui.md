@@ -8,7 +8,10 @@ from one repository.
 
 - Imported from `OrcaBus/orca-ui@3933ce5` with `git subtree split --prefix=deploy`, so `git log` / `git blame` keep
   the original history.
-- Restructured into `bin/`, `lib/common/`, `lib/orcaui/`, `test/orcaui/` and `docs/orcaui/`.
+- Restructured into `bin/`, `lib/common/`, per-app pipeline folders and `docs/`. The OrcaUI pipeline
+  stacks now live under `lib/portal/orcaui/`, with shared hosting in `lib/portal/infra/` and tests in
+  `test/portal/`. (At migration time these were `lib/orcaui/` and `test/orcaui/`, before the portal
+  refactor generalised the layout for Hub and OrcaHouse.)
 - **Stack IDs and construct IDs are unchanged.** `cdk synth` output is byte-identical to the legacy app for:
   - `OrcaUIAppPipeline`
   - `OrcaUIV2AppPipeline`
@@ -16,7 +19,7 @@ from one repository.
 - The only intended differences are in `OrcaUIInfrastructurePipeline` (the self-mutating `OrcaBus-OrcaUIInfrastructure`
   CodePipeline):
   - source repository `OrcaBus/orca-ui` → `umccr/frontend-infrastructure-pipelines`
-  - trigger file paths `deploy/**` → shared files + `lib/orcaui/**`
+  - trigger file paths `deploy/**` → shared files + `lib/portal/infra/**`
   - synth/test commands run from the repository root instead of `--cwd deploy`, and use pnpm instead of Yarn
     (`pnpm install --frozen-lockfile`, `pnpm cdk synth`, `pnpm run test`)
 
@@ -28,7 +31,7 @@ from one repository.
 
 - [x] **GitHub owner. (Done.)** `DeploymentStackPipeline` used to hardcode the `OrcaBus/<githubRepo>` source owner.
       As of `@orcabus/platform-cdk-constructs@1.9.8` it accepts a `githubOwner` prop (default `OrcaBus`), and
-      [`lib/orcaui/infrastructure-deployment-stack.ts`](../lib/orcaui/infrastructure-deployment-stack.ts) sets
+      [`lib/portal/infra/infrastructure-deployment-stack.ts`](../lib/portal/infra/infrastructure-deployment-stack.ts) sets
       `githubOwner: 'umccr'`. The pipeline now synthesizes a source of `umccr/frontend-infrastructure-pipelines`. No
       further action is needed here unless the repository moves organisations.
 - [x] **CodeStar connection access. (Done.)** The connection referenced by the `codestar_github_arn` SSM parameter in
@@ -55,7 +58,7 @@ Run these from the repository root with credentials for the toolchain account (`
    The app-pipeline diff is currently **not empty**, but the difference is expected and safe. It adds two environment
    variables (`VITE_SYSTEM_CATALOG_URL`, `VITE_DEPLOY_STATUS_URL`, both pointing at STG) to the gamma
    `OpenApiTSCheck` / `OrcaUIV2OpenApiTSCheck` CodeBuild projects. Those values already exist in
-   [`lib/orcaui/config.ts`](../lib/orcaui/config.ts); the deployed app pipelines simply predate that config change, so
+   [`lib/portal/infra/config.ts`](../lib/portal/infra/config.ts); the deployed app pipelines simply predate that config change, so
    this is config catch-up rather than a change introduced by the pnpm/dependency work. The affected CodeBuild project
    is the **gamma type-check gate only** — it validates types against the STG OpenAPI schema and never builds or
    uploads a production bundle. See the app-pipeline drift item in step 5.
@@ -108,8 +111,8 @@ Run these from the repository root with credentials for the toolchain account (`
 ## Follow-ups after cutover
 
 - Remove the legacy `Excludes: ['deploy/**']` trigger filter from
-  [`app-pipeline-stack.ts`](../lib/orcaui/app-pipeline-stack.ts) and
-  [`v2-app-pipeline-stack.ts`](../lib/orcaui/v2-app-pipeline-stack.ts), then deploy those stacks manually. The app
+  [`app-pipeline-stack.ts`](../lib/portal/orcaui/app-pipeline-stack.ts) and
+  [`v2-app-pipeline-stack.ts`](../lib/portal/orcaui/v2-app-pipeline-stack.ts), then deploy those stacks manually. The app
   pipeline stacks are not self-mutating.
 
 ## Rollback

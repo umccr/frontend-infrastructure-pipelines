@@ -9,12 +9,9 @@ import {
 import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { accountIdAlias, AppStage, REGION } from '../common/config';
-import {
-  cloudFrontBucketNameConfig,
-  configLambdaNameConfig,
-  getInfrastructureStackConfig,
-} from './config';
+import { accountIdAlias, AppStage, REGION } from '../../common/config';
+import { ORCAUI_APP, requireBucketName } from '../infra/apps';
+import { configLambdaNameConfig, getInfrastructureStackConfig } from '../infra/config';
 
 export class OrcaUIAppPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {
@@ -73,6 +70,7 @@ export class OrcaUIAppPipelineStack extends Stack {
      * updates env.js and invalidates CloudFront.
      */
     const deployProject = (env: AppStage) => {
+      const destinationBucketName = requireBucketName(ORCAUI_APP, env);
       const deployProjectRole = new Role(this, `ReactDeployProjectRole${env}`, {
         assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
       });
@@ -82,8 +80,8 @@ export class OrcaUIAppPipelineStack extends Stack {
           effect: Effect.ALLOW,
           actions: ['s3:Get*', 's3:List*', 's3:PutObject', 's3:DeleteObject'],
           resources: [
-            `arn:aws:s3:::${cloudFrontBucketNameConfig[env]}`,
-            `arn:aws:s3:::${cloudFrontBucketNameConfig[env]}/*`,
+            `arn:aws:s3:::${destinationBucketName}`,
+            `arn:aws:s3:::${destinationBucketName}/*`,
           ],
         })
       );
@@ -117,7 +115,7 @@ export class OrcaUIAppPipelineStack extends Stack {
         environment: { buildImage },
         environmentVariables: {
           DESTINATION_BUCKET_NAME: {
-            value: cloudFrontBucketNameConfig[env],
+            value: destinationBucketName,
           },
           CONFIG_LAMBDA_NAME: {
             value: configLambdaNameConfig[env],
