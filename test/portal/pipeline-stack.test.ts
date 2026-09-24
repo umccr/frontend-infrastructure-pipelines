@@ -3,10 +3,10 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, jest, test } from '@jest/globals';
 import type { Construct } from 'constructs';
 import { AppStage } from '../../lib/common/config';
-import { InfrastructureDeploymentStack } from '../../lib/portal/infrastructure-deployment-stack';
-import { OrcaUIAppPipelineStack } from '../../lib/orcaui/app-pipeline-stack';
-import { OrcaUIV2AppPipelineStack } from '../../lib/orcaui/v2-app-pipeline-stack';
-import { ORCAUI_V2_APP } from '../../lib/portal/apps';
+import { InfrastructureDeploymentStack } from '../../lib/portal/infra/infrastructure-deployment-stack';
+import { OrcaUIAppPipelineStack } from '../../lib/portal/orcaui/app-pipeline-stack';
+import { OrcaUIV2AppPipelineStack } from '../../lib/portal/orcaui/v2-app-pipeline-stack';
+import { ORCAUI_V2_APP } from '../../lib/portal/infra/apps';
 import {
   acknowledgeFindings,
   addAwsSolutionsChecks,
@@ -24,7 +24,7 @@ const ACCEPTED_PIPELINE_RULES = [
 ];
 
 // we are mocking the infrastructure stack here, as we have a dedicated cdk-nag test for it
-jest.mock('../../lib/portal/infrastructure-stack', () => {
+jest.mock('../../lib/portal/infra/infrastructure-stack', () => {
   return {
     InfrastructureStack: jest.fn((value: Construct) => {
       return new Stack(value, 'mockStack', {});
@@ -99,18 +99,19 @@ const pipelineStacks: {
     repository: 'umccr/frontend-infrastructure-pipelines',
     sourceActionName: 'pipeline-src',
     // Listed literally rather than reusing PORTAL_INFRASTRUCTURE_FILE_PATHS so that changing the
-    // trigger paths is a deliberate, reviewed edit. `lib/portal/**` must be present: it holds the
-    // hosting stack this pipeline deploys. Per-app folders must stay out.
+    // trigger paths is a deliberate, reviewed edit. `lib/portal/infra/**` must be present: it holds
+    // the hosting stack this pipeline deploys. Per-app folders (lib/portal/<app>/**) must stay out.
     filePaths: {
       Includes: [
         'bin/**',
         'lib/common/**',
-        'lib/portal/**',
+        'lib/portal/infra/**',
         'cdk.json',
         'package.json',
         'pnpm-lock.yaml',
         'tsconfig.json',
       ],
+      Excludes: ['docs/**', '**/*.md', '**/README*', 'LICENSE', '**/LICENSE'],
     },
     expectedStages: ['Source', 'Build', 'OrcaBusBeta', 'OrcaBusGamma', 'OrcaBusProd'],
   },

@@ -1,15 +1,15 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { ORCAHOUSE_APP } from '../portal/apps';
-import { PortalAppPipeline } from '../portal/app-pipeline';
+import { ORCAHOUSE_APP } from '../infra/apps';
+import { PortalAppPipeline } from '../infra/app-pipeline';
 
 /**
  * CI/CD for OrcaHouse (`umccr/orcahouse-ui`), served at
  * `portal.<stage>.umccr.org/orcahouse/`.
  *
  * Hosting (bucket, CloudFront behaviour, DNS, `env.js`) belongs to the shared portal stack in
- * `lib/portal/`; `ORCAHOUSE_APP` in `lib/portal/apps.ts` is its registry entry and decides which
- * stages exist. Currently beta and prod, with no gamma.
+ * `lib/portal/infra/`; `ORCAHOUSE_APP` in `lib/portal/infra/apps.ts` is its registry entry and
+ * decides which stages exist. Currently beta and prod, with no gamma.
  *
  * ## Required Next.js configuration in `umccr/orcahouse-ui`
  *

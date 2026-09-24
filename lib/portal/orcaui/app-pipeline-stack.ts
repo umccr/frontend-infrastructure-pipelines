@@ -9,9 +9,9 @@ import {
 import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { accountIdAlias, AppStage, REGION } from '../common/config';
-import { ORCAUI_APP, requireBucketName } from '../portal/apps';
-import { configLambdaNameConfig, getInfrastructureStackConfig } from '../portal/config';
+import { accountIdAlias, AppStage, REGION } from '../../common/config';
+import { ORCAUI_APP, requireBucketName } from '../infra/apps';
+import { configLambdaNameConfig, getInfrastructureStackConfig } from '../infra/config';
 
 export class OrcaUIAppPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps) {

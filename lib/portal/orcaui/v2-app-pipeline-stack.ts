@@ -15,9 +15,9 @@ import {
 import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { accountIdAlias, AppStage, REGION } from '../common/config';
-import { ORCAUI_V2_APP } from '../portal/apps';
-import { configLambdaNameConfig, getInfrastructureStackConfig } from '../portal/config';
+import { accountIdAlias, AppStage, REGION } from '../../common/config';
+import { ORCAUI_V2_APP } from '../infra/apps';
+import { configLambdaNameConfig, getInfrastructureStackConfig } from '../infra/config';
 
 const v2BucketName = ORCAUI_V2_APP.bucketName;
 

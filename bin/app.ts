@@ -2,11 +2,11 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { TOOLCHAIN_ACCOUNT_ID, REGION } from '../lib/common/config';
-import { InfrastructureDeploymentStack } from '../lib/portal/infrastructure-deployment-stack';
-import { OrcaUIAppPipelineStack } from '../lib/orcaui/app-pipeline-stack';
-import { OrcaUIV2AppPipelineStack } from '../lib/orcaui/v2-app-pipeline-stack';
-import { HubAppPipelineStack } from '../lib/hub/app-pipeline-stack';
-import { OrcaHouseAppPipelineStack } from '../lib/orcahouse/app-pipeline-stack';
+import { InfrastructureDeploymentStack } from '../lib/portal/infra/infrastructure-deployment-stack';
+import { OrcaUIAppPipelineStack } from '../lib/portal/orcaui/app-pipeline-stack';
+import { OrcaUIV2AppPipelineStack } from '../lib/portal/orcaui/v2-app-pipeline-stack';
+import { HubAppPipelineStack } from '../lib/portal/hub/app-pipeline-stack';
+import { OrcaHouseAppPipelineStack } from '../lib/portal/orcahouse/app-pipeline-stack';
 
 const app = new cdk.App();
 
@@ -20,7 +20,7 @@ const toolchainEnv = {
 //
 // One stack per stage owns the S3 buckets, CloudFront distribution, Route 53 aliases and env
 // config Lambda for every app mounted on the portal domain. Apps are registered in
-// lib/portal/apps.ts. The 'OrcaUI' prefix in the stack ID is a deployed resource identity that
+// lib/portal/infra/apps.ts. The 'OrcaUI' prefix in the stack ID is a deployed resource identity that
 // predates Hub and OrcaHouse; do not rename it.
 // ---------------------------------------------------------------------------
 

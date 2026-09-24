@@ -2,9 +2,9 @@ import { App, Stack, StackProps } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, test } from '@jest/globals';
 import { AppStage } from '../../lib/common/config';
-import { HUB_APP, ORCAHOUSE_APP, PortalApp } from '../../lib/portal/apps';
-import { HubAppPipelineStack } from '../../lib/hub/app-pipeline-stack';
-import { OrcaHouseAppPipelineStack } from '../../lib/orcahouse/app-pipeline-stack';
+import { HUB_APP, ORCAHOUSE_APP, PortalApp } from '../../lib/portal/infra/apps';
+import { HubAppPipelineStack } from '../../lib/portal/hub/app-pipeline-stack';
+import { OrcaHouseAppPipelineStack } from '../../lib/portal/orcahouse/app-pipeline-stack';
 import {
   acknowledgeFindings,
   addAwsSolutionsChecks,

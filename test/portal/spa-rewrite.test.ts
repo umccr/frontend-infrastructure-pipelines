@@ -1,8 +1,8 @@
 import { runInNewContext } from 'node:vm';
 import { describe, expect, test } from '@jest/globals';
 import { AppStage } from '../../lib/common/config';
-import { renderSpaRewriteCode } from '../../lib/portal/infrastructure-stack';
-import { getHostedApps, HostedApp } from '../../lib/portal/apps';
+import { renderSpaRewriteCode } from '../../lib/portal/infra/infrastructure-stack';
+import { getHostedApps, HostedApp } from '../../lib/portal/infra/apps';
 
 /**
  * Behavioural tests for the generated CloudFront viewer-request function.

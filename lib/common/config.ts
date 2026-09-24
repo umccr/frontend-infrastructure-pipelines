@@ -1,6 +1,6 @@
 /**
  * Organisation-wide constants shared by every frontend deployed from this repository.
- * Frontend-specific configuration lives next to its stacks, e.g. `lib/orcaui/config.ts`.
+ * Frontend-specific configuration lives with the portal infrastructure, in `lib/portal/infra/config.ts`.
  */
 
 export enum AppStage {

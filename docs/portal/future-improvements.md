@@ -39,7 +39,7 @@ as apps are added:
 - A landing page or app switcher at `/` cannot be added without shipping through OrcaUI.
 - The cost of the move grows with each app added, because each one adds links to rewrite.
 
-**Mitigation already in place.** `lib/portal/apps.ts` models the root as just another app with
+**Mitigation already in place.** `lib/portal/infra/apps.ts` models the root as just another app with
 `pathPrefix: ''`, so the move is a registry change rather than a redesign.
 
 **Interim guard rail.** Treat these paths as portal-owned and do not let OrcaUI define routes that
@@ -173,12 +173,12 @@ seven days, so sessions in flight during a deploy keep working.
 
 ## 6. Extract a reusable `PortalAppPipeline` construct
 
-**Status: the construct exists** at [`lib/portal/app-pipeline.ts`](../../lib/portal/app-pipeline.ts)
+**Status: the construct exists** at [`lib/portal/infra/app-pipeline.ts`](../../lib/portal/infra/app-pipeline.ts)
 and Hub and OrcaHouse are built from it. **OrcaUI and OrcaUI v2 have not been migrated**, which is
 the remaining work and was deliberately deferred so the construct's API was validated by two real
 apps before touching production pipelines. It now has been.
 
-**Cost of leaving it.** `lib/orcaui/app-pipeline-stack.ts` and `v2-app-pipeline-stack.ts` are
+**Cost of leaving it.** `lib/portal/orcaui/app-pipeline-stack.ts` and `v2-app-pipeline-stack.ts` are
 largely duplicated, differing only in package manager, artifact directory, sync target and stage
 gating. Each new app copies that again, and the copies drift.
 
@@ -250,8 +250,8 @@ Pick one: set `"types": ["node", "jest"]`, or keep the tightening and remove the
 **Deferred because** the team chose beta and prod only, to ship sooner.
 
 **Cost of leaving it.** Changes to these apps go from beta straight to prod with only a manual
-approval in between, and a `lib/portal/**` change that affects them is first exercised against them
-in production. `GAMMA_GAP_APPS` in [`apps.ts`](../../lib/portal/apps.ts) names them, and a test
+approval in between, and a `lib/portal/infra/**` change that affects them is first exercised against them
+in production. `GAMMA_GAP_APPS` in [`apps.ts`](../../lib/portal/infra/apps.ts) names them, and a test
 asserts the list, so the gap cannot widen silently.
 
 **What it involves.** Add the gamma bucket to each app's `bucketName`. The hosting stack and the

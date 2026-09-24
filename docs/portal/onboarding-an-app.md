@@ -1,11 +1,19 @@
 # Onboarding an app to the portal
 
-What an app repository must do to be served from `portal.<stage>.umccr.org/<prefix>/`.
+Adding a new frontend to the **existing portal domain**, served at
+`portal.<stage>.umccr.org/<prefix>/` (for example `portal.umccr.org/hub/`). The app gets a URL path
+prefix and its own S3 bucket behind the one shared CloudFront distribution — it does **not** get a new
+domain, distribution or DNS record.
 
-The infrastructure side is one registry entry; see
-[Adding a new frontend](../../README.md#adding-a-new-frontend). This page covers the **app repo**
-side, which is where onboarding usually goes wrong, because the failures are quiet: assets 404, or
-deep links render the wrong page, rather than the deploy failing.
+> Standing up a **new domain** (e.g. `docs.umccr.org`), with its own distribution and DNS, is a
+> different and heavier operation. See [Adding a new frontend](../adding-a-new-frontend.md).
+
+This page covers the **app repo** side — what the frontend's own repository must do. The
+infrastructure side (registering the app in this repo) is a few lines; it is summarised in
+[Register the app in this repo](#register-the-app-in-this-repo) below and detailed in
+[Adding a new frontend](../adding-a-new-frontend.md#portal-app-the-common-case). The app repo side is
+where onboarding usually goes wrong, because the failures are quiet: assets 404, or deep links render
+the wrong page, rather than the deploy failing.
 
 ## 1. Build with the path prefix as the base path
 
@@ -13,7 +21,7 @@ Every app shares one hostname with the others. An app built for the site root em
 `/assets/main-abc123.js`, which resolve against the **root app's** bucket, not its own. The result is
 a blank page with 404s in the console, or worse, OrcaUI's HTML served where a chunk was expected.
 
-Set the base path to match `pathPrefix` in [`apps.ts`](../../lib/portal/apps.ts):
+Set the base path to match `pathPrefix` in [`apps.ts`](../../lib/portal/infra/apps.ts):
 
 | Toolchain        | Setting                                                              |
 | ---------------- | -------------------------------------------------------------------- |
@@ -90,7 +98,7 @@ the live one survives `--delete`; a build-provided copy would never be uploaded 
 local development.
 
 All apps currently receive the same payload, listed in
-[`config.ts`](../../lib/portal/config.ts). Values sourced from SSM (Cognito client, OAuth
+[`config.ts`](../../lib/portal/infra/config.ts). Values sourced from SSM (Cognito client, OAuth
 redirects) are shared, which is what makes single sign-on across the portal work.
 
 ## 5. Expect a shared session, and a shared trust boundary
@@ -126,6 +134,27 @@ Two categories never reach the bucket at all:
   want source maps for error reporting, upload them to the reporting service from CI instead.
 - **`env.js`.** The config Lambda owns it. A placeholder in your build output is fine and is what you
   should use for local development; the deploy will not overwrite the real one with it.
+
+## Register the app in this repo
+
+The infrastructure side is small and lives entirely in this repository:
+
+1. Add a `PortalApp` entry to [`apps.ts`](../../lib/portal/infra/apps.ts) with the app's `pathPrefix`,
+   `clientRouting` mode, source `repo` and per-stage bucket names. Leave a stage's bucket `undefined`
+   to skip it (beta-first rollout).
+2. Add a pipeline stack under `lib/portal/<app>/app-pipeline-stack.ts` using the shared
+   [`PortalAppPipeline`](../../lib/portal/infra/app-pipeline.ts) construct, and register it in
+   [`bin/app.ts`](../../bin/app.ts).
+
+Full steps and the blast-radius note are in
+[Adding a new frontend → Portal app](../adding-a-new-frontend.md#portal-app-the-common-case).
+
+## Deploying
+
+Merging the registry entry deploys the bucket and CloudFront behaviour through the shared
+infrastructure pipeline (all stages). The app pipeline stack is deployed manually and ships the app's
+contents when the app repo's `main` changes. The mechanics of both, with worked examples, are in
+[`docs/deploying.md`](../deploying.md).
 
 ## Checklist
 

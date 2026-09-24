@@ -1,4 +1,4 @@
-import { accountIdAlias, AppStage } from '../common/config';
+import { accountIdAlias, AppStage } from '../../common/config';
 
 /**
  * Registry of the frontends hosted on the shared portal distribution
@@ -12,7 +12,7 @@ import { accountIdAlias, AppStage } from '../common/config';
  *
  *  1. `infrastructure-stack.ts` — a CloudFront behaviour per prefix, and the SPA rewrite allowlist.
  *  2. `lambda/env_config_and_cdn_refresh.py` — writes `<prefix>/env.js` into the app's bucket.
- *  3. `lib/<app>/app-pipeline-stack.ts` — syncs the build artifact to `s3://<bucket>/<prefix>/`.
+ *  3. `lib/portal/<app>/app-pipeline-stack.ts` — syncs the build artifact to `s3://<bucket>/<prefix>/`.
  *
  * Adding an app here does not deploy it. It becomes real once a stage has a bucket name, and
  * reachable once its pipeline stack is registered in `bin/app.ts`.
@@ -158,7 +158,7 @@ export const PORTAL_APPS: PortalApp[] = [ORCAUI_APP, ORCAUI_V2_APP, HUB_APP, ORC
  * Apps hosted in prod but not gamma, so their changes reach production without a staging soak.
  *
  * This is a deliberate trade for delivery speed, recorded here rather than left implicit. The
- * consequence: a `lib/portal/**` change that affects these apps is first exercised against them in
+ * consequence: a `lib/portal/infra/**` change that affects these apps is first exercised against them in
  * production, and their own app pipelines promote beta straight to prod behind a manual approval.
  * Add the gamma bucket to close the gap.
  */

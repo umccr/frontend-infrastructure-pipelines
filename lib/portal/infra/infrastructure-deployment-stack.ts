@@ -1,26 +1,40 @@
 import { Construct } from 'constructs';
 import { DeploymentStackPipeline } from '@orcabus/platform-cdk-constructs/deployment-stack-pipeline';
 import { InfrastructureStack } from './infrastructure-stack';
-import { AppStage } from '../common/config';
+import { AppStage } from '../../common/config';
 import { getInfrastructureStackConfig } from './config';
 import { Stack, StackProps } from 'aws-cdk-lib';
 
 /**
  * Repository paths that start the portal infrastructure pipeline when changed on `main`.
  *
- * `lib/portal/**` holds the hosting stack shared by every frontend (buckets, CloudFront, DNS,
- * env config Lambda), so it must be included. The per-app folders (`lib/orcaui/**`, `lib/hub/**`,
- * ...) only contain app CI/CD pipeline stacks, which are deployed separately, so they are
- * deliberately excluded: an app pipeline change must not redeploy shared hosting infrastructure.
+ * `lib/portal/infra/**` holds the hosting stack shared by every frontend (buckets, CloudFront,
+ * DNS, env config Lambda), so it must be included. The per-app folders (`lib/portal/orcaui/**`,
+ * `lib/portal/hub/**`, ...) only contain app CI/CD pipeline stacks, which are deployed separately,
+ * so they are deliberately NOT matched here: an app pipeline change must not redeploy shared
+ * hosting infrastructure.
  */
 export const PORTAL_INFRASTRUCTURE_FILE_PATHS = [
   'bin/**',
   'lib/common/**',
-  'lib/portal/**',
+  'lib/portal/infra/**',
   'cdk.json',
   'package.json',
   'pnpm-lock.yaml',
   'tsconfig.json',
+];
+
+/**
+ * Documentation-only paths that must NOT start the portal infrastructure pipeline.
+ * These never affect a synthesized template, so a docs-only change shouldn't deploy.
+ * Excludes win over includes, so e.g. `docs/**` here overrides an included folder's `README`.
+ */
+export const INFRASTRUCTURE_EXCLUDED_FILE_PATHS = [
+  'docs/**',
+  '**/*.md',
+  '**/README*',
+  'LICENSE',
+  '**/LICENSE',
 ];
 
 /**
@@ -53,6 +67,7 @@ export class InfrastructureDeploymentStack extends Stack {
       githubOwner: 'umccr',
       githubRepo: 'frontend-infrastructure-pipelines',
       includedFilePaths: PORTAL_INFRASTRUCTURE_FILE_PATHS,
+      excludedFilePaths: INFRASTRUCTURE_EXCLUDED_FILE_PATHS,
       stack: InfrastructureStack,
       stackName: 'OrcaUIInfrastructureStack',
       stackConfig: {

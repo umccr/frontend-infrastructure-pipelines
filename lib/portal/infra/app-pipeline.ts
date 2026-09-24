@@ -19,7 +19,7 @@ import {
 import { Effect, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { accountIdAlias, AppStage, REGION } from '../common/config';
+import { accountIdAlias, AppStage, REGION } from '../../common/config';
 import { PortalApp, requireBucketName } from './apps';
 import { configLambdaNameConfig } from './config';
 

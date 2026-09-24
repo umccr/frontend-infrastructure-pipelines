@@ -1,4 +1,4 @@
-import { AppStage } from '../common/config';
+import { AppStage } from '../../common/config';
 import { getHostedApps } from './apps';
 import { InfrastructureStackProps } from './infrastructure-stack';
 

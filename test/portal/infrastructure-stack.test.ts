@@ -2,8 +2,8 @@ import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, test } from '@jest/globals';
 import { accountIdAlias, AppStage } from '../../lib/common/config';
-import { InfrastructureStack } from '../../lib/portal/infrastructure-stack';
-import { getInfrastructureStackConfig } from '../../lib/portal/config';
+import { InfrastructureStack } from '../../lib/portal/infra/infrastructure-stack';
+import { getInfrastructureStackConfig } from '../../lib/portal/infra/config';
 import {
   GAMMA_GAP_APPS,
   getHostedApps,
@@ -11,7 +11,7 @@ import {
   ORCAHOUSE_APP,
   ORCAUI_APP,
   ORCAUI_V2_APP,
-} from '../../lib/portal/apps';
+} from '../../lib/portal/infra/apps';
 import {
   acknowledgeFindings,
   addAwsSolutionsChecks,

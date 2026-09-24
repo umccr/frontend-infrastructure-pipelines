@@ -4,7 +4,7 @@
 >
 > **This document records why UI v2 was hosted at `/v2/`.** The mechanism it originally described,
 > a v1 bucket plus an optional v2 bucket, has since been generalised: the portal now hosts an
-> arbitrary set of apps on path prefixes, driven by [`lib/portal/apps.ts`](../../lib/portal/apps.ts).
+> arbitrary set of apps on path prefixes, driven by [`lib/portal/infra/apps.ts`](../../lib/portal/infra/apps.ts).
 > For how routing, SPA rewrites and `env.js` work today, see
 > [`docs/portal/README.md`](../portal/README.md).
 
@@ -32,7 +32,7 @@ These goals held up, and they are now the model for every portal app rather than
 ## Stage rollout
 
 UI v2 is hosted in beta, gamma and prod. Bucket names come from `ORCAUI_V2_APP` in
-[`lib/portal/apps.ts`](../../lib/portal/apps.ts):
+[`lib/portal/infra/apps.ts`](../../lib/portal/infra/apps.ts):
 
 - **Beta**: `orcaui-v2-cloudfront-843407916570`
 - **Gamma**: `orcaui-v2-cloudfront-455634345446`
@@ -46,7 +46,7 @@ SPA rewrite entry and its `env.js` target.
 1. Browser requests `https://portal.dev.umccr.org/v2/workflows`, which has no file extension.
 2. CloudFront matches **`/v2/*`** and forwards to the **v2 origin**, S3 via OAI.
 3. The **CloudFront Function**
-   ([`lib/portal/lambda/spa-rewrite.js`](../../lib/portal/lambda/spa-rewrite.js)) maps the URI to
+   ([`lib/portal/infra/lambda/spa-rewrite.js`](../../lib/portal/infra/lambda/spa-rewrite.js)) maps the URI to
    **`/v2/index.html`** so the SPA shell loads.
 4. Requests under `/v2/` that do carry a known extension, for example `.js`, `.css` or `.png`, are
    **not** rewritten and are fetched by key from the v2 bucket.
@@ -63,8 +63,8 @@ Tracked as
 ## References
 
 - [`docs/portal/README.md`](../portal/README.md) — current hosting, routing and runtime config.
-- [`lib/portal/apps.ts`](../../lib/portal/apps.ts) — the app registry.
-- [`lib/portal/infrastructure-stack.ts`](../../lib/portal/infrastructure-stack.ts) — buckets,
+- [`lib/portal/infra/apps.ts`](../../lib/portal/infra/apps.ts) — the app registry.
+- [`lib/portal/infra/infrastructure-stack.ts`](../../lib/portal/infra/infrastructure-stack.ts) — buckets,
   CloudFront behaviours, Lambda env, IAM grants.
-- [`lib/orcaui/v2-app-pipeline-stack.ts`](../../lib/orcaui/v2-app-pipeline-stack.ts) — build and
+- [`lib/portal/orcaui/v2-app-pipeline-stack.ts`](../../lib/portal/orcaui/v2-app-pipeline-stack.ts) — build and
   `/v2/` sync for `OrcaBus/orca-ui-v2`.

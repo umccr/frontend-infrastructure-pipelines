@@ -16,7 +16,7 @@ URL path prefix. Source lives in [`lib/portal/`](../../lib/portal/).
 | `/hub/`       | Hub       | `umccr/hub`          | `hub-cloudfront-<account>`       | beta              |
 | `/orcahouse/` | OrcaHouse | `umccr/orcahouse-ui` | `orcahouse-cloudfront-<account>` | beta              |
 
-The registry is [`lib/portal/apps.ts`](../../lib/portal/apps.ts) and is the single source of truth.
+The registry is [`lib/portal/infra/apps.ts`](../../lib/portal/infra/apps.ts) and is the single source of truth.
 A stage with no bucket entry is not provisioned: it gets no bucket, no CloudFront behaviour and no
 SPA rewrite entry, and its pipeline skips that deploy stage. That is how an app rolls out beta first.
 
@@ -35,7 +35,7 @@ an origin by path pattern:
 Because the routing table has to be inside the function (CloudFront Functions take no environment
 variables), the function's source is generated at synth time from the same app list that creates the
 behaviours. See `renderSpaRewriteCode` in
-[`infrastructure-stack.ts`](../../lib/portal/infrastructure-stack.ts). This is deliberate: an app
+[`infrastructure-stack.ts`](../../lib/portal/infra/infrastructure-stack.ts). This is deliberate: an app
 cannot get a behaviour without also getting a routing entry, so the two cannot drift, and a test
 asserts the two sets match.
 
@@ -99,7 +99,7 @@ the others' cached objects. Scoping that per app is
 ## App pipelines
 
 Each app has a build-and-deploy pipeline in the toolchain account, built from the shared
-[`PortalAppPipeline`](../../lib/portal/app-pipeline.ts) construct. Stages come from the app's
+[`PortalAppPipeline`](../../lib/portal/infra/app-pipeline.ts) construct. Stages come from the app's
 `bucketName`, so a stage with no bucket gets no deploy stage. Prod is always behind a manual
 approval.
 
@@ -123,8 +123,9 @@ pnpm cdk deploy HubAppPipeline OrcaHouseAppPipeline
 
 ## Adding an app
 
-See [Adding a new frontend](../../README.md#adding-a-new-frontend) for the infrastructure steps and
-[`onboarding-an-app.md`](./onboarding-an-app.md) for what the app repository must do.
+See [Adding a new frontend](../adding-a-new-frontend.md#portal-app-the-common-case) for the
+infrastructure steps and [`onboarding-an-app.md`](./onboarding-an-app.md) for what the app repository
+must do. For how the deploy actually runs, see [`docs/deploying.md`](../deploying.md).
 
 ## Deployed names that no longer match
 
@@ -140,7 +141,7 @@ guard against an accidental rename deleting a bucket.
 
 ## Verifying a change
 
-Changes under `lib/portal/**` trigger the shared infrastructure pipeline and redeploy hosting for
+Changes under `lib/portal/infra/**` trigger the shared infrastructure pipeline and redeploy hosting for
 every app in all three stages. Confirm the blast radius before merging:
 
 ```sh
