@@ -19,6 +19,19 @@ export const ORCAUI_INFRASTRUCTURE_FILE_PATHS = [
   'tsconfig.json',
 ];
 
+/**
+ * Documentation-only paths that must NOT start the OrcaUI infrastructure pipeline.
+ * These never affect a synthesized template, so a docs-only change shouldn't deploy.
+ * Excludes win over includes, so e.g. `docs/**` here overrides an included folder's `README`.
+ */
+export const ORCAUI_INFRASTRUCTURE_EXCLUDED_FILE_PATHS = [
+  'docs/**',
+  '**/*.md',
+  '**/README*',
+  'LICENSE',
+  '**/LICENSE',
+];
+
 export class InfrastructureDeploymentStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
@@ -42,6 +55,7 @@ export class InfrastructureDeploymentStack extends Stack {
       githubOwner: 'umccr',
       githubRepo: 'frontend-infrastructure-pipelines',
       includedFilePaths: ORCAUI_INFRASTRUCTURE_FILE_PATHS,
+      excludedFilePaths: ORCAUI_INFRASTRUCTURE_EXCLUDED_FILE_PATHS,
       stack: InfrastructureStack,
       stackName: 'OrcaUIInfrastructureStack',
       stackConfig: {

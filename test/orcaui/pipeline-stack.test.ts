@@ -108,6 +108,7 @@ const pipelineStacks: {
         'pnpm-lock.yaml',
         'tsconfig.json',
       ],
+      Excludes: ['docs/**', '**/*.md', '**/README*', 'LICENSE', '**/LICENSE'],
     },
     expectedStages: ['Source', 'Build', 'OrcaBusBeta', 'OrcaBusGamma', 'OrcaBusProd'],
   },
