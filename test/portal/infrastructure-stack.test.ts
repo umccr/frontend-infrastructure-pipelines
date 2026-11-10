@@ -9,6 +9,7 @@ import {
   getHostedApps,
   HUB_APP,
   ORCAHOUSE_APP,
+  ORCASONAR_APP,
   ORCAUI_APP,
   ORCAUI_V2_APP,
 } from '../../lib/portal/infra/apps';
@@ -254,22 +255,36 @@ describe('staged rollout', () => {
     }
   });
 
-  test('Hub and OrcaHouse are hosted in beta and prod, but not gamma', () => {
+  test('Hub, OrcaHouse and the OrcaSonar Console are hosted in beta and prod, but not gamma', () => {
     for (const appStage of [AppStage.BETA, AppStage.PROD]) {
       const ids = getHostedApps(appStage).map((hostedApp) => hostedApp.id);
       expect(ids).toContain(HUB_APP.id);
       expect(ids).toContain(ORCAHOUSE_APP.id);
+      expect(ids).toContain(ORCASONAR_APP.id);
     }
 
     const gammaIds = getHostedApps(AppStage.GAMMA).map((hostedApp) => hostedApp.id);
     expect(gammaIds).not.toContain(HUB_APP.id);
     expect(gammaIds).not.toContain(ORCAHOUSE_APP.id);
+    // OrcaSonar has no staging stage, so a gamma console would have no API to call.
+    expect(gammaIds).not.toContain(ORCASONAR_APP.id);
+  });
+
+  test('the OrcaSonar Console is an SPA under /orcasonar/, in its own bucket per stage', () => {
+    for (const appStage of [AppStage.BETA, AppStage.PROD]) {
+      const template = synth(appStage);
+      expect(bucketNames(template)).toContain(`orcasonar-cloudfront-${accountIdAlias[appStage]}`);
+      expect(
+        (distributionConfig(template).CacheBehaviors ?? []).map((b) => b.PathPattern)
+      ).toContain('/orcasonar/*');
+    }
+    expect(ORCASONAR_APP.clientRouting).toBe('spa');
   });
 
   test('GAMMA_GAP_APPS names exactly the apps that reach prod without a gamma soak', () => {
     // Deliberate trade for delivery speed. If a gamma bucket is added, this list shrinks and the
     // assertion should be updated rather than the export quietly going stale.
-    expect(GAMMA_GAP_APPS.map((app) => app.id).sort()).toEqual(['hub', 'orcahouse']);
+    expect(GAMMA_GAP_APPS.map((app) => app.id).sort()).toEqual(['hub', 'orcahouse', 'orcasonar']);
   });
 
   test('an unhosted app gets no bucket, behaviour or rewrite entry', () => {

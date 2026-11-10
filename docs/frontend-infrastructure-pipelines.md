@@ -15,15 +15,17 @@ The portal is one shared hosting platform, driven by an app registry, serving se
 built frontends on one domain. Each app lives on its own URL path prefix behind a single CloudFront
 distribution, each from its own S3 bucket:
 
-| App       | Path          | Repo                 | Stages                |
-| --------- | ------------- | -------------------- | --------------------- |
-| OrcaUI    | `/`           | `OrcaBus/orca-ui`    | beta, gamma, prod     |
-| OrcaUI v2 | `/v2/`        | `OrcaBus/orca-ui-v2` | per config            |
-| Hub       | `/hub/`       | `umccr/hub`          | beta, prod (no gamma) |
-| OrcaHouse | `/orcahouse/` | `umccr/orcahouse-ui` | beta, prod (no gamma) |
+| App               | Path          | Repo                      | Stages                |
+| ----------------- | ------------- | ------------------------- | --------------------- |
+| OrcaUI            | `/`           | `OrcaBus/orca-ui`         | beta, gamma, prod     |
+| OrcaUI v2         | `/v2/`        | `OrcaBus/orca-ui-v2`      | per config            |
+| Hub               | `/hub/`       | `umccr/hub`               | beta, prod (no gamma) |
+| OrcaHouse         | `/orcahouse/` | `umccr/orcahouse-ui`      | beta, prod (no gamma) |
+| OrcaSonar Console | `/orcasonar/` | `umccr/orcasonar-console` | beta, prod (no gamma) |
 
 Adding a frontend is a registry entry plus a small pipeline stack — not a new distribution or DNS
-record. Hub and OrcaHouse intentionally have no gamma stage (tracked as a gamma gap).
+record. Hub and OrcaHouse intentionally have no gamma stage (tracked as a gamma gap). The OrcaSonar Console has
+none because OrcaSonar itself runs in dev and prod only.
 
 ## Key design points
 
@@ -31,7 +33,7 @@ record. Hub and OrcaHouse intentionally have no gamma stage (tracked as a gamma 
   `clientRouting` mode and per-stage bucket names. The hosting stack derives the bucket, the
   `/<prefix>/*` CloudFront behaviour, the SPA-rewrite entry and the `env.js` target from it, so a
   prefix is registered in exactly one place and a behaviour cannot drift from its rewrite rule.
-- **Two client-routing modes.** `spa` (OrcaUI, v2, Hub) rewrites every route to one `index.html`;
+- **Two client-routing modes.** `spa` (OrcaUI, v2, Hub, OrcaSonar Console) rewrites every route to one `index.html`;
   `static-export` (OrcaHouse's Next.js export) rewrites `/orcahouse/a/b` to `/orcahouse/a/b/index.html`.
   The CloudFront Function's route table is generated at synth time from the registry (CloudFront
   Functions take no env vars, so it is baked in). Synth throws if the template declaration can't be
@@ -66,7 +68,8 @@ still synthesize. Never rename a deployed stack or construct ID without a migrat
 │       │                   #   infrastructure stacks, env config Lambda + SPA rewrite function
 │       ├── orcaui/         # OrcaUI + v2 app pipeline stacks
 │       ├── hub/            # Hub app pipeline stack
-│       └── orcahouse/      # OrcaHouse app pipeline stack
+│       ├── orcahouse/      # OrcaHouse app pipeline stack
+│       └── orcasonar/      # OrcaSonar Console app pipeline stack
 ├── test/                   # Tests mirror lib/portal/
 └── docs/                   # Per-frontend runbooks and design notes
 ```
@@ -80,16 +83,17 @@ still synthesize. Never rename a deployed stack or construct ID without a migrat
   new Hub/OrcaHouse buckets and behaviours plus the generalised Lambda and rewrite-function bodies are
   the only changes. Reproduce with `pnpm cdk synth` before/after and `diff -r` (ignoring
   `*.metadata.json`, `tree.json`, `*.dot`).
-- `HubAppPipeline` and `OrcaHouseAppPipeline` are deployed manually (`pnpm cdk deploy …`) and are not
-  self-mutating. Their `/hub/*` and `/orcahouse/*` origins are empty until their app pipelines run.
+- `HubAppPipeline`, `OrcaHouseAppPipeline` and `OrcaSonarConsoleAppPipeline` are deployed manually
+  (`pnpm cdk deploy …`) and are not self-mutating. Their `/hub/*`, `/orcahouse/*` and `/orcasonar/*` origins
+  are empty until their app pipelines run.
 
 ## Cross-repo dependencies
 
 - Cognito callback URLs for each path prefix live in `umccr/infrastructure` `cognito_aai` — apply an
   environment's URLs before that environment's app deploys, or sign-in is rejected with
   `redirect_mismatch`. See `docs/cognito-aai/`.
-- Portal-fit changes in the apps themselves: `umccr/hub` (see `docs/hub/`) and `umccr/orcahouse-ui`
-  (see `docs/orcahouse-ui/`).
+- Portal-fit changes in the apps themselves: `umccr/hub` (see `docs/hub/`), `umccr/orcahouse-ui`
+  (see `docs/orcahouse-ui/`) and `umccr/orcasonar-console` (see `docs/orcasonar-console/`).
 
 ## Known follow-ups
 

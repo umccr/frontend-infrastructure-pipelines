@@ -15,13 +15,14 @@
 │       │   └── lambda/         #   env config Lambda + SPA rewrite CloudFront function
 │       ├── orcaui/             # One folder per frontend: app CI/CD pipeline stacks only
 │       ├── hub/
-│       └── orcahouse/
+│       ├── orcahouse/
+│       └── orcasonar/
 ├── test/
 │   ├── common/                 # Shared test helpers (cdk-nag)
 │   └── portal/                 # Tests mirror lib/portal/
 └── docs/
     ├── portal/                 # Hosting model, routing, runtime config, future improvements
-    ├── orcaui/, hub/, orcahouse-ui/, cognito-aai/   # Per-frontend runbooks and design notes
+    ├── orcaui/, hub/, orcahouse-ui/, orcasonar-console/, cognito-aai/   # Per-frontend runbooks and design notes
     ├── repository-layout.md    # This file
     └── adding-a-new-frontend.md
 ```

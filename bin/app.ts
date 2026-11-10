@@ -7,6 +7,7 @@ import { OrcaUIAppPipelineStack } from '../lib/portal/orcaui/app-pipeline-stack'
 import { OrcaUIV2AppPipelineStack } from '../lib/portal/orcaui/v2-app-pipeline-stack';
 import { HubAppPipelineStack } from '../lib/portal/hub/app-pipeline-stack';
 import { OrcaHouseAppPipelineStack } from '../lib/portal/orcahouse/app-pipeline-stack';
+import { OrcaSonarConsoleAppPipelineStack } from '../lib/portal/orcasonar/app-pipeline-stack';
 
 const app = new cdk.App();
 
@@ -74,5 +75,17 @@ new OrcaHouseAppPipelineStack(app, 'OrcaHouseAppPipeline', {
   tags: {
     'umccr-org:Stack': 'OrcaHouseAppPipeline',
     'umccr-org:Product': 'OrcaHouse',
+  },
+});
+
+// ---------------------------------------------------------------------------
+// OrcaSonar Console — served at /orcasonar/ (https://github.com/umccr/orcasonar-console)
+// ---------------------------------------------------------------------------
+
+new OrcaSonarConsoleAppPipelineStack(app, 'OrcaSonarConsoleAppPipeline', {
+  env: toolchainEnv,
+  tags: {
+    'umccr-org:Stack': 'OrcaSonarConsoleAppPipeline',
+    'umccr-org:Product': 'OrcaSonar',
   },
 });

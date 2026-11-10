@@ -49,6 +49,10 @@ describe('beta, where every app is hosted', () => {
     ['/hub/', '/hub/index.html'],
     ['/hub/dashboard', '/hub/index.html'],
     ['/hub/a/b/c', '/hub/index.html'],
+    ['/orcasonar', '/orcasonar/index.html'],
+    ['/orcasonar/', '/orcasonar/index.html'],
+    ['/orcasonar/audit', '/orcasonar/index.html'],
+    ['/orcasonar/chat', '/orcasonar/index.html'],
   ])('SPA: routes %s to %s', (uri, expected) => {
     expect(route(handler, uri)).toBe(expected);
   });
@@ -79,6 +83,9 @@ describe('beta, where every app is hosted', () => {
     '/orcahouse/manifest.json',
     '/orcahouse/_next/static/chunks/main-abc123.js',
     '/v2/assets/index-9f8e7d.js',
+    '/orcasonar/env.js',
+    '/orcasonar/favicon.svg',
+    '/orcasonar/assets/inter-latin-wght-normal-Dx4kXJAl.woff2',
   ])('serves %s unchanged', (uri) => {
     expect(route(handler, uri)).toBe(uri);
   });
@@ -97,6 +104,7 @@ describe('beta, where every app is hosted', () => {
     expect(route(handler, '/hubbub')).toBe('/index.html');
     expect(route(handler, '/v2beta')).toBe('/index.html');
     expect(route(handler, '/orcahouse-admin')).toBe('/index.html');
+    expect(route(handler, '/orcasonarx')).toBe('/index.html');
   });
 
   test('prefix matching is case sensitive, as CloudFront path patterns are', () => {
@@ -113,7 +121,7 @@ describe('beta, where every app is hosted', () => {
   });
 });
 
-describe('prod, where Hub and OrcaHouse are hosted but gamma is skipped', () => {
+describe('prod, where Hub, OrcaHouse and the OrcaSonar Console are hosted but gamma is skipped', () => {
   const handler = loadHandler(AppStage.PROD);
 
   test('keeps serving OrcaUI and v2 exactly as before', () => {
@@ -127,10 +135,11 @@ describe('prod, where Hub and OrcaHouse are hosted but gamma is skipped', () => 
   test('serves the new apps', () => {
     expect(route(handler, '/hub/dashboard')).toBe('/hub/index.html');
     expect(route(handler, '/orcahouse/tables')).toBe('/orcahouse/tables/index.html');
+    expect(route(handler, '/orcasonar/audit')).toBe('/orcasonar/index.html');
   });
 });
 
-describe('gamma, where Hub and OrcaHouse are not hosted', () => {
+describe('gamma, where Hub, OrcaHouse and the OrcaSonar Console are not hosted', () => {
   const handler = loadHandler(AppStage.GAMMA);
 
   test('routes an unprovisioned app to the root app rather than a missing origin', () => {
@@ -139,6 +148,7 @@ describe('gamma, where Hub and OrcaHouse are not hosted', () => {
     expect(route(handler, '/hub')).toBe('/index.html');
     expect(route(handler, '/hub/dashboard')).toBe('/index.html');
     expect(route(handler, '/orcahouse/tables')).toBe('/index.html');
+    expect(route(handler, '/orcasonar/audit')).toBe('/index.html');
   });
 });
 

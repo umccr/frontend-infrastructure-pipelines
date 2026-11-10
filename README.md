@@ -13,12 +13,13 @@ its own S3 bucket behind one shared CloudFront distribution. The registry of app
 [`lib/portal/infra/apps.ts`](lib/portal/infra/apps.ts); shared hosting lives in
 [`lib/portal/infra/`](lib/portal/infra/) and each app's CI/CD pipeline in `lib/portal/<app>/`.
 
-| Frontend  | URL path      | Repo                 | App pipeline                                     | Stages            |
-| --------- | ------------- | -------------------- | ------------------------------------------------ | ----------------- |
-| OrcaUI    | `/`           | `OrcaBus/orca-ui`    | [`lib/portal/orcaui/`](lib/portal/orcaui/)       | beta, gamma, prod |
-| OrcaUI v2 | `/v2/`        | `OrcaBus/orca-ui-v2` | [`lib/portal/orcaui/`](lib/portal/orcaui/)       | beta, gamma, prod |
-| Hub       | `/hub/`       | `umccr/hub`          | [`lib/portal/hub/`](lib/portal/hub/)             | beta, prod        |
-| OrcaHouse | `/orcahouse/` | `umccr/orcahouse-ui` | [`lib/portal/orcahouse/`](lib/portal/orcahouse/) | beta, prod        |
+| Frontend          | URL path      | Repo                      | App pipeline                                     | Stages            |
+| ----------------- | ------------- | ------------------------- | ------------------------------------------------ | ----------------- |
+| OrcaUI            | `/`           | `OrcaBus/orca-ui`         | [`lib/portal/orcaui/`](lib/portal/orcaui/)       | beta, gamma, prod |
+| OrcaUI v2         | `/v2/`        | `OrcaBus/orca-ui-v2`      | [`lib/portal/orcaui/`](lib/portal/orcaui/)       | beta, gamma, prod |
+| Hub               | `/hub/`       | `umccr/hub`               | [`lib/portal/hub/`](lib/portal/hub/)             | beta, prod        |
+| OrcaHouse         | `/orcahouse/` | `umccr/orcahouse-ui`      | [`lib/portal/orcahouse/`](lib/portal/orcahouse/) | beta, prod        |
+| OrcaSonar Console | `/orcasonar/` | `umccr/orcasonar-console` | [`lib/portal/orcasonar/`](lib/portal/orcasonar/) | beta, prod        |
 
 ## Development
 
@@ -46,7 +47,8 @@ manually and which ones deploy through a self-mutating pipeline.
   - [`onboarding-an-app.md`](docs/portal/onboarding-an-app.md) — what an app repository must do to be hosted here.
   - [`future-improvements.md`](docs/portal/future-improvements.md) — deferred work and open decisions.
 - Per-frontend notes: [`docs/orcaui/`](docs/orcaui/README.md), [`docs/hub/`](docs/hub/README.md),
-  [`docs/orcahouse-ui/`](docs/orcahouse-ui/README.md), [`docs/cognito-aai/`](docs/cognito-aai/README.md).
+  [`docs/orcahouse-ui/`](docs/orcahouse-ui/README.md), [`docs/orcasonar-console/`](docs/orcasonar-console/README.md),
+  [`docs/cognito-aai/`](docs/cognito-aai/README.md).
 - OrcaUI was migrated from `OrcaBus/orca-ui` `deploy/`; see
   [`docs/migration-from-orca-ui.md`](docs/migration-from-orca-ui.md).
 
@@ -54,6 +56,8 @@ manually and which ones deploy through a self-mutating pipeline.
 
 - [`OrcaBus/orca-ui`](https://github.com/OrcaBus/orca-ui), [`OrcaBus/orca-ui-v2`](https://github.com/OrcaBus/orca-ui-v2) — OrcaUI apps.
 - [`umccr/hub`](https://github.com/umccr/hub), [`umccr/orcahouse-ui`](https://github.com/umccr/orcahouse-ui) — Hub and OrcaHouse apps.
+- [`umccr/orcasonar-console`](https://github.com/umccr/orcasonar-console) — the OrcaSonar Console, a client of
+  [`umccr/orcasonar`](https://github.com/umccr/orcasonar).
 - [`umccr/infrastructure`](https://github.com/umccr/infrastructure) — `cognito_aai` stack owns the per-app Cognito callback URLs.
 
 ## Conventions
