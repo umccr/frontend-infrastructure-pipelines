@@ -81,6 +81,10 @@ static-export rewrite applied to an SPA 404s every deep link. `trailingSlash: tr
 
 Routing behaviour is covered by [`test/portal/spa-rewrite.test.ts`](../../test/portal/spa-rewrite.test.ts),
 which executes the generated function. Add cases there when onboarding an app.
+[`test/portal/infrastructure-stack.test.ts`](../../test/portal/infrastructure-stack.test.ts) also
+replays requests against the synthesized distribution, behaviour selection included, so every hosted
+app's bare path, base path and deep links are checked against the bucket that serves them without a
+new case.
 
 ## 4. Read runtime config from `env.js`
 

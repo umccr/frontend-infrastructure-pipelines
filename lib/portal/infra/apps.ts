@@ -6,7 +6,8 @@ import { accountIdAlias, AppStage } from '../../common/config';
  *
  * Each app is an independently built and deployed SPA, served in place on its own URL path prefix
  * of the same hostname, from its own S3 bucket, behind one shared CloudFront distribution. There
- * is no HTTP redirect and no shared runtime shell: navigating between apps is a full page load.
+ * is no shared runtime shell: navigating between apps is a full page load. The only HTTP redirect
+ * sends a bare `/<prefix>` to `/<prefix>/`, which is the path the app's behaviour matches.
  *
  * `pathPrefix` is the contract shared by three places, all of which derive it from this file:
  *

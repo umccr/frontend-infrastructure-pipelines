@@ -23,8 +23,7 @@ SPA rewrite entry, and its pipeline skips that deploy stage. That is how an app 
 
 ## How routing works
 
-There is no HTTP redirect. One CloudFront distribution per stage serves every app in place, choosing
-an origin by path pattern:
+One CloudFront distribution per stage serves every app in place, choosing an origin by path pattern:
 
 - The root app is the **default behaviour**. Anything not matching another pattern goes there.
 - Each path-mounted app gets an **additional behaviour** on `/<prefix>/*` pointing at its own bucket.
@@ -32,6 +31,11 @@ an origin by path pattern:
   file, so client-side routes and deep links work. How it rewrites depends on the app's
   `clientRouting` mode: an `spa` app gets its single shell, a `static-export` app gets the exported
   HTML for the requested route.
+- The bare prefix (`/hub`, no trailing slash) is the one **HTTP redirect**: the function answers it
+  with a `302` to `/hub/`, keeping the query string. `/hub` matches no `/hub/*` pattern, so CloudFront
+  has already chosen the root app's origin by the time the function runs. A rewrite cannot change the
+  origin, so rewriting it would fetch `hub/index.html` from OrcaUI's bucket, which S3 answers with
+  `403 AccessDenied`.
 
 Because the routing table has to be inside the function (CloudFront Functions take no environment
 variables), the function's source is generated at synth time from the same app list that creates the
@@ -52,6 +56,7 @@ reformatted.
 | `/subjects/abc`                   | default   | rewritten to `/index.html`                                             |
 | `/runs/wfr.01ABC`                 | default   | rewritten to `/index.html`, the dotted ID is not treated as a filename |
 | `/assets/main-abc123.js`          | default   | served by key, not rewritten                                           |
+| `/hub`                            | default   | `302` to `/hub/`, never sent to an origin                              |
 | `/hub/dashboard`                  | `/hub/*`  | rewritten to `/hub/index.html`                                         |
 | `/hub/assets/main-abc123.js`      | `/hub/*`  | served by key from Hub's bucket                                        |
 | `/hub/...` in a stage without Hub | default   | rewritten to `/index.html`, OrcaUI renders not-found                   |

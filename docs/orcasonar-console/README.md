@@ -35,13 +35,19 @@ it in `GAMMA_GAP_APPS`, for a different reason from Hub and OrcaHouse.
 
 ## Prerequisites, in order
 
-1. **Cognito callbacks.** `/orcasonar/` in `portal_app_paths` of `umccr/infrastructure`
+1. **A buildable console on `main`.** The pipeline builds `umccr/orcasonar-console` `main` and runs
+   `corepack install` and `pnpm install --frozen-lockfile` before `pnpm build`, so `main` needs the
+   app's `package.json` and `pnpm-lock.yaml`. Until
+   [umccr/orcasonar-console#1](https://github.com/umccr/orcasonar-console/pull/1) merges, `main` holds
+   only a README and every build fails at install. The registry keeps `main` on purpose: pointing it
+   at a feature branch would ship unreviewed code to prod and need a second change to undo.
+2. **Cognito callbacks.** `/orcasonar/` in `portal_app_paths` of `umccr/infrastructure`
    `cognito_aai`, applied to an environment **before** the console reaches it, or sign-in fails with
    `redirect_mismatch`. See [`docs/cognito-aai/`](../cognito-aai/README.md).
-2. **OrcaSonar's API.** The console uses `/audit/conversations` and `/chat/history`, so OrcaSonar must
+3. **OrcaSonar's API.** The console uses `/audit/conversations` and `/chat/history`, so OrcaSonar must
    be deployed with them in that stage. OrcaSonar's authorizer already accepts the portal's
    `orcaui-app-<stage>` client, and its CORS allows the canonical portal hosts.
-3. **Source access.** The `codestar_github_arn` connection's GitHub app must be able to read
+4. **Source access.** The `codestar_github_arn` connection's GitHub app must be able to read
    `umccr/orcasonar-console`, or the pipeline's Source stage fails.
 
 ## Pipeline stack
@@ -68,19 +74,23 @@ portal infrastructure; the console's registry entry is `ORCASONAR_APP` in
 1. Merge the registry entry. The infrastructure pipeline deploys the console's bucket, the
    `/orcasonar/*` behaviour, its SPA rewrite entry and its `env.js` target to beta, then to prod after
    the approval. The origin stays empty until the app pipeline runs.
-2. Deploy the app pipeline from the toolchain account. This updates the pipeline definition only:
+2. Once the console is on `main` (prerequisite 1), deploy the app pipeline from the toolchain account.
+   CodePipeline runs a newly created pipeline once straight away and that run cannot be turned off,
+   so this first deploy is also the first release. Deploying it earlier only gives a failed build,
+   since nothing reaches a bucket, but it leaves the pipeline red until the next push.
 
    ```sh
    pnpm cdk diff OrcaSonarConsoleAppPipeline
    pnpm cdk deploy OrcaSonarConsoleAppPipeline
    ```
 
-3. Release it: merge to `umccr/orcasonar-console` `main`, or
+3. Later releases: merge to `umccr/orcasonar-console` `main`, or
    `aws codepipeline start-pipeline-execution --name OrcaSonarConsoleAppCICDPipeline`. Beta deploys
    first; prod waits for the approval.
 
-Check a stage with `curl -s https://portal.dev.umccr.org/orcasonar/env.js`, then sign in at
-`https://portal.dev.umccr.org/orcasonar/`.
+Check a stage with `curl -s https://portal.dev.umccr.org/orcasonar/env.js`, and that
+`curl -sI https://portal.dev.umccr.org/orcasonar` answers `302` with `location: /orcasonar/`. Then
+sign in at `https://portal.dev.umccr.org/orcasonar/`.
 
 ## Related
 
