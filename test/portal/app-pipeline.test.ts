@@ -2,9 +2,10 @@ import { App, Stack, StackProps } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, test } from '@jest/globals';
 import { AppStage } from '../../lib/common/config';
-import { HUB_APP, ORCAHOUSE_APP, PortalApp } from '../../lib/portal/infra/apps';
+import { HUB_APP, ORCAHOUSE_APP, ORCASONAR_APP, PortalApp } from '../../lib/portal/infra/apps';
 import { HubAppPipelineStack } from '../../lib/portal/hub/app-pipeline-stack';
 import { OrcaHouseAppPipelineStack } from '../../lib/portal/orcahouse/app-pipeline-stack';
+import { OrcaSonarConsoleAppPipelineStack } from '../../lib/portal/orcasonar/app-pipeline-stack';
 import {
   acknowledgeFindings,
   addAwsSolutionsChecks,
@@ -71,6 +72,16 @@ const cases: {
     // Next.js static export, NOT .next/, which is a build cache and cannot be served from S3.
     artifactBaseDirectory: 'out/',
     neverCacheGlobs: [...BASE_NEVER_CACHE_GLOBS, '*.txt'],
+  },
+  {
+    label: 'OrcaSonarConsole',
+    StackClass: OrcaSonarConsoleAppPipelineStack,
+    app: ORCASONAR_APP,
+    pipelineName: 'OrcaSonarConsoleAppCICDPipeline',
+    namePrefix: 'OrcaSonarConsole',
+    repo: 'umccr/orcasonar-console',
+    artifactBaseDirectory: 'build/',
+    neverCacheGlobs: BASE_NEVER_CACHE_GLOBS,
   },
 ];
 
@@ -312,7 +323,7 @@ describe.each(cases)(
 );
 
 describe('portal app pipelines do not collide', () => {
-  test('Hub and OrcaHouse use distinct physical names', () => {
+  test('Hub, OrcaHouse and the OrcaSonar Console use distinct physical names', () => {
     const names = (StackClass: PipelineStackConstructor, id: string) => {
       const template = Template.fromStack(
         new StackClass(new App({}), id, {
@@ -327,10 +338,15 @@ describe('portal app pipelines do not collide', () => {
       ];
     };
 
-    const hub = names(HubAppPipelineStack, 'H');
-    const orcahouse = names(OrcaHouseAppPipelineStack, 'O');
+    const all = [
+      ...names(HubAppPipelineStack, 'H'),
+      ...names(OrcaHouseAppPipelineStack, 'O'),
+      ...names(OrcaSonarConsoleAppPipelineStack, 'S'),
+    ];
 
-    // CodeBuild and CodePipeline names are account-wide, shared with OrcaUI's existing pipelines.
-    expect(hub.filter((name) => orcahouse.includes(name))).toEqual([]);
+    // CodeBuild and CodePipeline names are account-wide, shared with OrcaUI's existing pipelines and,
+    // for the console, OrcaSonar's own (`UMCCR-OrcaSonar*`).
+    expect(all.filter((name, index) => all.indexOf(name) !== index)).toEqual([]);
+    expect(all.filter((name) => name.startsWith('UMCCR-OrcaSonar'))).toEqual([]);
   });
 });

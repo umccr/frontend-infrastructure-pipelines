@@ -10,7 +10,7 @@ Everything runs in the toolchain account (`383856791668`) and deploys cross-acco
 
 |               | Infrastructure pipeline                                                                                         | App pipelines                                                                                                        |
 | ------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Stack         | `OrcaUIInfrastructurePipeline`                                                                                  | `OrcaUIAppPipeline`, `OrcaUIV2AppPipeline`, `HubAppPipeline`, `OrcaHouseAppPipeline`                                 |
+| Stack         | `OrcaUIInfrastructurePipeline`                                                                                  | `OrcaUIAppPipeline`, `OrcaUIV2AppPipeline`, `HubAppPipeline`, `OrcaHouseAppPipeline`, `OrcaSonarConsoleAppPipeline`  |
 | Deploys       | the shared `InfrastructureStack` (buckets, CloudFront, DNS, env config Lambda) to every stage                   | one frontend's built assets to its bucket                                                                            |
 | Source        | `umccr/frontend-infrastructure-pipelines` (this repo)                                                           | the app repo (`OrcaBus/orca-ui`, `umccr/hub`, ...)                                                                   |
 | Self-mutating | **yes** — a pipeline run redeploys the pipeline itself, then the stacks                                         | **no** — `cdk deploy` only updates the pipeline definition                                                           |
@@ -29,12 +29,13 @@ OrcaUIAppPipeline
 OrcaUIV2AppPipeline
 HubAppPipeline
 OrcaHouseAppPipeline
+OrcaSonarConsoleAppPipeline
 OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusBeta/OrcaUIInfrastructureStack (OrcaBusBeta-OrcaUIInfrastructureStack)
 OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusGamma/OrcaUIInfrastructureStack (OrcaBusGamma-OrcaUIInfrastructureStack)
 OrcaUIInfrastructurePipeline/DeploymentPipeline/OrcaBusProd/OrcaUIInfrastructureStack (OrcaBusProd-OrcaUIInfrastructureStack)
 ```
 
-The top five are the pipeline stacks you deploy from your machine. The three nested
+The top six are the pipeline stacks you deploy from your machine. The three nested
 `.../OrcaBus<Stage>/OrcaUIInfrastructureStack` entries are the per-stage hosting stacks that the
 infrastructure pipeline deploys **for you** — you normally never deploy those directly, they are
 listed because CDK Pipelines models them as stages of the pipeline. (`cdk synth`/`diff` against a
@@ -104,7 +105,8 @@ pnpm cdk deploy HubAppPipeline
 aws codepipeline start-pipeline-execution --name HubAppCICDPipeline
 ```
 
-The same pattern applies to `OrcaUIAppPipeline`, `OrcaUIV2AppPipeline` and `OrcaHouseAppPipeline`.
+The same pattern applies to `OrcaUIAppPipeline`, `OrcaUIV2AppPipeline`, `OrcaHouseAppPipeline` and
+`OrcaSonarConsoleAppPipeline`.
 Deploy several at once:
 
 ```sh

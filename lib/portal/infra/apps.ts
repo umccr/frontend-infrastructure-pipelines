@@ -6,7 +6,8 @@ import { accountIdAlias, AppStage } from '../../common/config';
  *
  * Each app is an independently built and deployed SPA, served in place on its own URL path prefix
  * of the same hostname, from its own S3 bucket, behind one shared CloudFront distribution. There
- * is no HTTP redirect and no shared runtime shell: navigating between apps is a full page load.
+ * is no shared runtime shell: navigating between apps is a full page load. The only HTTP redirect
+ * sends a bare `/<prefix>` to `/<prefix>/`, which is the path the app's behaviour matches.
  *
  * `pathPrefix` is the contract shared by three places, all of which derive it from this file:
  *
@@ -147,12 +148,40 @@ export const ORCAHOUSE_APP: PortalApp = {
 };
 
 /**
+ * OrcaSonar Console — served from `/orcasonar/`. React SPA built with Vite and pnpm: usage and the audit log
+ * for OrcaSonar, and playgrounds for its chat and search.
+ *
+ * Requires in `umccr/orcasonar-console`: Vite `base: '/orcasonar/'` and the router's basename to match.
+ * The console calls OrcaSonar at `sonar.<stage>.umccr.org`, whose CORS allows the canonical portal
+ * hosts, so it moves a reader on `orcaui.*` or `portal.prod.*` to `portal.<stage>.umccr.org` first.
+ *
+ * Beta and prod only, because OrcaSonar itself runs in dev and prod only: a gamma console would have
+ * no API to call. It is in GAMMA_GAP_APPS for that reason, not as a deferred staging soak.
+ */
+export const ORCASONAR_APP: PortalApp = {
+  id: 'orcasonar',
+  pathPrefix: 'orcasonar',
+  repo: 'umccr/orcasonar-console',
+  clientRouting: 'spa',
+  bucketName: {
+    [AppStage.BETA]: cloudFrontBucketName('orcasonar', AppStage.BETA),
+    [AppStage.PROD]: cloudFrontBucketName('orcasonar', AppStage.PROD),
+  },
+};
+
+/**
  * Every app hosted on the portal distribution.
  *
  * Order is significant for CDK construct creation order, which keeps synthesized templates stable.
  * **Append new apps at the end**; reordering produces a large, meaningless template diff.
  */
-export const PORTAL_APPS: PortalApp[] = [ORCAUI_APP, ORCAUI_V2_APP, HUB_APP, ORCAHOUSE_APP];
+export const PORTAL_APPS: PortalApp[] = [
+  ORCAUI_APP,
+  ORCAUI_V2_APP,
+  HUB_APP,
+  ORCAHOUSE_APP,
+  ORCASONAR_APP,
+];
 
 /**
  * Apps hosted in prod but not gamma, so their changes reach production without a staging soak.
@@ -160,7 +189,8 @@ export const PORTAL_APPS: PortalApp[] = [ORCAUI_APP, ORCAUI_V2_APP, HUB_APP, ORC
  * This is a deliberate trade for delivery speed, recorded here rather than left implicit. The
  * consequence: a `lib/portal/infra/**` change that affects these apps is first exercised against them in
  * production, and their own app pipelines promote beta straight to prod behind a manual approval.
- * Add the gamma bucket to close the gap.
+ * Add the gamma bucket to close the gap. The OrcaSonar Console's gap can't close that way until
+ * OrcaSonar runs in staging, since a gamma console would have no API to call.
  */
 export const GAMMA_GAP_APPS: PortalApp[] = PORTAL_APPS.filter(
   (app) => app.bucketName[AppStage.PROD] && !app.bucketName[AppStage.GAMMA]

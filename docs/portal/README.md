@@ -9,12 +9,13 @@ URL path prefix. Source lives in [`lib/portal/`](../../lib/portal/).
 
 ## Apps
 
-| Path          | App       | Repo                 | Bucket                           | Stages            |
-| ------------- | --------- | -------------------- | -------------------------------- | ----------------- |
-| `/`           | OrcaUI    | `OrcaBus/orca-ui`    | `orcaui-cloudfront-<account>`    | beta, gamma, prod |
-| `/v2/`        | OrcaUI v2 | `OrcaBus/orca-ui-v2` | `orcaui-v2-cloudfront-<account>` | beta, gamma, prod |
-| `/hub/`       | Hub       | `umccr/hub`          | `hub-cloudfront-<account>`       | beta              |
-| `/orcahouse/` | OrcaHouse | `umccr/orcahouse-ui` | `orcahouse-cloudfront-<account>` | beta              |
+| Path          | App               | Repo                      | Bucket                           | Stages            |
+| ------------- | ----------------- | ------------------------- | -------------------------------- | ----------------- |
+| `/`           | OrcaUI            | `OrcaBus/orca-ui`         | `orcaui-cloudfront-<account>`    | beta, gamma, prod |
+| `/v2/`        | OrcaUI v2         | `OrcaBus/orca-ui-v2`      | `orcaui-v2-cloudfront-<account>` | beta, gamma, prod |
+| `/hub/`       | Hub               | `umccr/hub`               | `hub-cloudfront-<account>`       | beta              |
+| `/orcahouse/` | OrcaHouse         | `umccr/orcahouse-ui`      | `orcahouse-cloudfront-<account>` | beta              |
+| `/orcasonar/` | OrcaSonar Console | `umccr/orcasonar-console` | `orcasonar-cloudfront-<account>` | beta, prod        |
 
 The registry is [`lib/portal/infra/apps.ts`](../../lib/portal/infra/apps.ts) and is the single source of truth.
 A stage with no bucket entry is not provisioned: it gets no bucket, no CloudFront behaviour and no
@@ -22,8 +23,7 @@ SPA rewrite entry, and its pipeline skips that deploy stage. That is how an app 
 
 ## How routing works
 
-There is no HTTP redirect. One CloudFront distribution per stage serves every app in place, choosing
-an origin by path pattern:
+One CloudFront distribution per stage serves every app in place, choosing an origin by path pattern:
 
 - The root app is the **default behaviour**. Anything not matching another pattern goes there.
 - Each path-mounted app gets an **additional behaviour** on `/<prefix>/*` pointing at its own bucket.
@@ -31,6 +31,11 @@ an origin by path pattern:
   file, so client-side routes and deep links work. How it rewrites depends on the app's
   `clientRouting` mode: an `spa` app gets its single shell, a `static-export` app gets the exported
   HTML for the requested route.
+- The bare prefix (`/hub`, no trailing slash) is the one **HTTP redirect**: the function answers it
+  with a `302` to `/hub/`, keeping the query string. `/hub` matches no `/hub/*` pattern, so CloudFront
+  has already chosen the root app's origin by the time the function runs. A rewrite cannot change the
+  origin, so rewriting it would fetch `hub/index.html` from OrcaUI's bucket, which S3 answers with
+  `403 AccessDenied`.
 
 Because the routing table has to be inside the function (CloudFront Functions take no environment
 variables), the function's source is generated at synth time from the same app list that creates the
@@ -51,6 +56,7 @@ reformatted.
 | `/subjects/abc`                   | default   | rewritten to `/index.html`                                             |
 | `/runs/wfr.01ABC`                 | default   | rewritten to `/index.html`, the dotted ID is not treated as a filename |
 | `/assets/main-abc123.js`          | default   | served by key, not rewritten                                           |
+| `/hub`                            | default   | `302` to `/hub/`, never sent to an origin                              |
 | `/hub/dashboard`                  | `/hub/*`  | rewritten to `/hub/index.html`                                         |
 | `/hub/assets/main-abc123.js`      | `/hub/*`  | served by key from Hub's bucket                                        |
 | `/hub/...` in a stage without Hub | default   | rewritten to `/index.html`, OrcaUI renders not-found                   |
@@ -60,12 +66,13 @@ reformatted.
 Each app gets its own `env.js`, written by the per-stage env config Lambda
 (`CodeBuildEnvConfigLambda{Beta,Gamma,Prod}`) after a deploy syncs assets to S3:
 
-| App       | Object                                                 |
-| --------- | ------------------------------------------------------ |
-| OrcaUI    | `s3://orcaui-cloudfront-<account>/env.js`              |
-| OrcaUI v2 | `s3://orcaui-v2-cloudfront-<account>/v2/env.js`        |
-| Hub       | `s3://hub-cloudfront-<account>/hub/env.js`             |
-| OrcaHouse | `s3://orcahouse-cloudfront-<account>/orcahouse/env.js` |
+| App               | Object                                                 |
+| ----------------- | ------------------------------------------------------ |
+| OrcaUI            | `s3://orcaui-cloudfront-<account>/env.js`              |
+| OrcaUI v2         | `s3://orcaui-v2-cloudfront-<account>/v2/env.js`        |
+| Hub               | `s3://hub-cloudfront-<account>/hub/env.js`             |
+| OrcaHouse         | `s3://orcahouse-cloudfront-<account>/orcahouse/env.js` |
+| OrcaSonar Console | `s3://orcasonar-cloudfront-<account>/orcasonar/env.js` |
 
 The targets come from the `PORTAL_APP_TARGETS` environment variable, generated by CDK from the
 registry, so adding an app needs no Lambda change. All apps currently receive the same payload.
@@ -118,7 +125,7 @@ App pipeline stacks are **not** self-mutating. `cdk deploy` updates the pipeline
 starting a release:
 
 ```sh
-pnpm cdk deploy HubAppPipeline OrcaHouseAppPipeline
+pnpm cdk deploy HubAppPipeline OrcaHouseAppPipeline OrcaSonarConsoleAppPipeline
 ```
 
 ## Adding an app

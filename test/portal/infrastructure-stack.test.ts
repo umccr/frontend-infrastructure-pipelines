@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm';
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, test } from '@jest/globals';
@@ -9,8 +10,10 @@ import {
   getHostedApps,
   HUB_APP,
   ORCAHOUSE_APP,
+  ORCASONAR_APP,
   ORCAUI_APP,
   ORCAUI_V2_APP,
+  PORTAL_APPS,
 } from '../../lib/portal/infra/apps';
 import {
   acknowledgeFindings,
@@ -22,11 +25,20 @@ type CfnResource = {
   Properties?: Record<string, unknown>;
 };
 
+type GetAtt = { 'Fn::GetAtt'?: [string, string] };
+
+type CacheBehavior = {
+  PathPattern?: string;
+  TargetOriginId?: string;
+  FunctionAssociations?: Array<{ EventType?: string; FunctionARN?: GetAtt }>;
+};
+
 type CloudFrontDistributionResource = {
   Properties: {
     DistributionConfig?: {
-      CacheBehaviors?: Array<{ PathPattern?: string }>;
-      DefaultCacheBehavior?: Record<string, unknown>;
+      CacheBehaviors?: CacheBehavior[];
+      DefaultCacheBehavior?: CacheBehavior;
+      Origins?: Array<{ Id?: string; DomainName?: GetAtt }>;
     };
   };
 };
@@ -85,6 +97,66 @@ const spaRewriteCode = (template: Template): string => {
   const code = fns[0].Properties?.FunctionCode;
   expect(typeof code).toBe('string');
   return code!;
+};
+
+/** CloudFront path-pattern matching: `*` is any run of characters, `?` exactly one, case sensitive. */
+const pathPatternMatches = (pattern: string, uri: string): boolean =>
+  new RegExp(
+    `^${pattern
+      .split('')
+      .map((char) =>
+        char === '*' ? '.*' : char === '?' ? '.' : char.replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      )
+      .join('')}$`
+  ).test(uri);
+
+type ViewerRequestOutcome =
+  { redirect: string; statusCode: number } | { bucket: string; key: string };
+
+/**
+ * What the synthesized distribution does with a viewer request, end to end. CloudFront picks the cache
+ * behaviour from the original path first, then runs that behaviour's viewer-request function, then
+ * fetches the possibly rewritten key from that behaviour's origin.
+ *
+ * Running the function on its own misses the first step: a function rewrite cannot move a request to
+ * another origin, so `/hub` rewritten to `/hub/index.html` on the default behaviour is still fetched
+ * from the root app's bucket.
+ */
+const viewerRequest = (template: Template, uri: string): ViewerRequestOutcome => {
+  const config = distributionConfig(template);
+  const behavior =
+    (config.CacheBehaviors ?? []).find((candidate) =>
+      pathPatternMatches(candidate.PathPattern!, uri)
+    ) ?? config.DefaultCacheBehavior!;
+
+  const functionIds = (behavior.FunctionAssociations ?? [])
+    .filter((association) => association.EventType === 'viewer-request')
+    .map((association) => association.FunctionARN?.['Fn::GetAtt']?.[0]);
+  expect(functionIds).toHaveLength(1);
+  const fn = template.findResources('AWS::CloudFront::Function')[functionIds[0]!] as {
+    Properties: { FunctionCode: string };
+  };
+
+  const sandbox: {
+    handler?: (event: object) => {
+      uri?: string;
+      statusCode?: number;
+      headers?: Record<string, { value: string }>;
+    };
+  } = {};
+  runInNewContext(fn.Properties.FunctionCode, sandbox);
+  const result = sandbox.handler!({ request: { uri, querystring: {} } });
+
+  if (result.statusCode !== undefined) {
+    return { redirect: result.headers!.location.value, statusCode: result.statusCode };
+  }
+
+  const origin = (config.Origins ?? []).find(
+    (candidate) => candidate.Id === behavior.TargetOriginId
+  );
+  const bucketLogicalId = origin?.DomainName?.['Fn::GetAtt']?.[0];
+  const bucket = template.findResources('AWS::S3::Bucket')[bucketLogicalId!] as CfnResource;
+  return { bucket: bucket.Properties!.BucketName as string, key: result.uri! };
 };
 
 describe('cdk-nag-stack', () => {
@@ -221,6 +293,53 @@ describe.each(Object.values(AppStage))('%s hosting', (appStage) => {
     );
   });
 
+  test('serves every hosted app from its own bucket at its bare path, base path and deep links', () => {
+    const template = synth(appStage);
+    const rootApp = hostedApps.find((hostedApp) => hostedApp.pathPrefix === '')!;
+
+    expect(viewerRequest(template, '/')).toEqual({
+      bucket: rootApp.bucketName,
+      key: '/index.html',
+    });
+    expect(viewerRequest(template, '/subjects/abc')).toEqual({
+      bucket: rootApp.bucketName,
+      key: '/index.html',
+    });
+
+    for (const hostedApp of prefixedApps) {
+      const base = `/${hostedApp.pathPrefix}`;
+
+      // The bare path matches no `/<prefix>/*` behaviour, so it must never reach an origin.
+      expect(viewerRequest(template, base)).toEqual({ redirect: `${base}/`, statusCode: 302 });
+      expect(viewerRequest(template, `${base}/`)).toEqual({
+        bucket: hostedApp.bucketName,
+        key: `${base}/index.html`,
+      });
+      expect(viewerRequest(template, `${base}/some/route`)).toEqual({
+        bucket: hostedApp.bucketName,
+        key:
+          hostedApp.clientRouting === 'spa'
+            ? `${base}/index.html`
+            : `${base}/some/route/index.html`,
+      });
+      expect(viewerRequest(template, `${base}/env.js`)).toEqual({
+        bucket: hostedApp.bucketName,
+        key: `${base}/env.js`,
+      });
+    }
+
+    // An app not hosted in this stage is the root app's route, at its bare path too.
+    const hostedIds = hostedApps.map((hostedApp) => hostedApp.id);
+    for (const app of PORTAL_APPS.filter((candidate) => !hostedIds.includes(candidate.id))) {
+      for (const uri of [`/${app.pathPrefix}`, `/${app.pathPrefix}/`, `/${app.pathPrefix}/x`]) {
+        expect(viewerRequest(template, uri)).toEqual({
+          bucket: rootApp.bucketName,
+          key: '/index.html',
+        });
+      }
+    }
+  });
+
   test('env config Lambda targets every hosted app bucket and key', () => {
     const environment = lambdaEnvironment(synth(appStage));
 
@@ -254,22 +373,36 @@ describe('staged rollout', () => {
     }
   });
 
-  test('Hub and OrcaHouse are hosted in beta and prod, but not gamma', () => {
+  test('Hub, OrcaHouse and the OrcaSonar Console are hosted in beta and prod, but not gamma', () => {
     for (const appStage of [AppStage.BETA, AppStage.PROD]) {
       const ids = getHostedApps(appStage).map((hostedApp) => hostedApp.id);
       expect(ids).toContain(HUB_APP.id);
       expect(ids).toContain(ORCAHOUSE_APP.id);
+      expect(ids).toContain(ORCASONAR_APP.id);
     }
 
     const gammaIds = getHostedApps(AppStage.GAMMA).map((hostedApp) => hostedApp.id);
     expect(gammaIds).not.toContain(HUB_APP.id);
     expect(gammaIds).not.toContain(ORCAHOUSE_APP.id);
+    // OrcaSonar has no staging stage, so a gamma console would have no API to call.
+    expect(gammaIds).not.toContain(ORCASONAR_APP.id);
+  });
+
+  test('the OrcaSonar Console is an SPA under /orcasonar/, in its own bucket per stage', () => {
+    for (const appStage of [AppStage.BETA, AppStage.PROD]) {
+      const template = synth(appStage);
+      expect(bucketNames(template)).toContain(`orcasonar-cloudfront-${accountIdAlias[appStage]}`);
+      expect(
+        (distributionConfig(template).CacheBehaviors ?? []).map((b) => b.PathPattern)
+      ).toContain('/orcasonar/*');
+    }
+    expect(ORCASONAR_APP.clientRouting).toBe('spa');
   });
 
   test('GAMMA_GAP_APPS names exactly the apps that reach prod without a gamma soak', () => {
     // Deliberate trade for delivery speed. If a gamma bucket is added, this list shrinks and the
     // assertion should be updated rather than the export quietly going stale.
-    expect(GAMMA_GAP_APPS.map((app) => app.id).sort()).toEqual(['hub', 'orcahouse']);
+    expect(GAMMA_GAP_APPS.map((app) => app.id).sort()).toEqual(['hub', 'orcahouse', 'orcasonar']);
   });
 
   test('an unhosted app gets no bucket, behaviour or rewrite entry', () => {

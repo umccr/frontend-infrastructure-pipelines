@@ -6,7 +6,7 @@ Context for how Cognito sign-in is configured for the UMCCR portal frontends. Th
 ## How it fits the portal
 
 The portal hosts several independently deployed frontends on one domain, each on its own URL path
-prefix (`/`, `/v2/`, `/hub/`, `/orcahouse/`). They all share the `orcaui-app-<workspace>` Cognito app
+prefix (`/`, `/v2/`, `/hub/`, `/orcahouse/`, `/orcasonar/`). They all share the `orcaui-app-<workspace>` Cognito app
 client, so a single sign-in covers every app.
 
 Cognito matches `redirect_uri` against `callback_urls` **exactly** — no prefix or wildcard matching.
@@ -17,7 +17,7 @@ so every one of those URLs must be registered on the app client, or sign-in is r
 ## Layout
 
 - `portal_apps.tf` — a single `portal_app_paths` local listing the path prefixes (`""`, `/v2/`,
-  `/hub/`, `/orcahouse/`), shared by both app clients. This mirrors `pathPrefix` in `lib/portal/infra/apps.ts`
+  `/hub/`, `/orcahouse/`, `/orcasonar/`), shared by both app clients. This mirrors `pathPrefix` in `lib/portal/infra/apps.ts`
   of `umccr/frontend-infrastructure-pipelines`; the two must stay in step.
 - `app_orcaui.tf` — `callback_urls` / `logout_urls` are the product of the workspace's origins and
   `portal_app_paths` (via `setproduct`). The `""` path reproduces the original single root URL, so the
@@ -29,11 +29,11 @@ so every one of those URLs must be registered on the app client, or sign-in is r
 
 ## Resulting URLs per workspace
 
-| Workspace | `orcaui-app` callback + logout URLs                            |
-| --------- | -------------------------------------------------------------- |
-| dev       | `portal.dev.umccr.org` × `/`, `/v2/`, `/hub/`, `/orcahouse/`   |
-| stg       | same shape on `portal.stg.umccr.org`                           |
-| prod      | both `portal.prod.umccr.org` and `portal.umccr.org`, × 4 paths |
+| Workspace | `orcaui-app` callback + logout URLs                                         |
+| --------- | --------------------------------------------------------------------------- |
+| dev       | `portal.dev.umccr.org` × `/`, `/v2/`, `/hub/`, `/orcahouse/`, `/orcasonar/` |
+| stg       | same shape on `portal.stg.umccr.org`                                        |
+| prod      | both `portal.prod.umccr.org` and `portal.umccr.org`, × 5 paths              |
 
 `/orcaui/oauth_redirect_*_stage` and the localhost redirect SSM parameters are unchanged in every
 workspace. `orca-ui` v1 is unaffected — it still sends and receives the portal root.
@@ -52,4 +52,4 @@ workspace. `orca-ui` v1 is unaffected — it still sends and receives the portal
 ## Related
 
 - `umccr/frontend-infrastructure-pipelines` — portal hosting + app pipelines.
-- `umccr/hub`, `umccr/orcahouse-ui` — the apps that send these redirect URLs.
+- `umccr/hub`, `umccr/orcahouse-ui`, `umccr/orcasonar-console` — the apps that send these redirect URLs.

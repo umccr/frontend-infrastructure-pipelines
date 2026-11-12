@@ -37,12 +37,13 @@ The root app (`pathPrefix: ''`) needs none of this.
 The pipeline syncs the **contents** of one directory to `s3://<bucket>/<prefix>/`, so that directory
 must have `index.html` at its top level.
 
-| App       | Toolchain     | Build        | Artifact directory |
-| --------- | ------------- | ------------ | ------------------ |
-| OrcaUI    | Yarn, Vite    | `yarn build` | `dist/`            |
-| OrcaUI v2 | pnpm          | `pnpm build` | `build/`           |
-| Hub       | pnpm, React   | `pnpm build` | `build/`           |
-| OrcaHouse | pnpm, Next.js | `pnpm build` | `out/`             |
+| App               | Toolchain     | Build        | Artifact directory |
+| ----------------- | ------------- | ------------ | ------------------ |
+| OrcaUI            | Yarn, Vite    | `yarn build` | `dist/`            |
+| OrcaUI v2         | pnpm          | `pnpm build` | `build/`           |
+| Hub               | pnpm, React   | `pnpm build` | `build/`           |
+| OrcaHouse         | pnpm, Next.js | `pnpm build` | `out/`             |
+| OrcaSonar Console | pnpm, Vite    | `pnpm build` | `build/`           |
 
 ### Next.js needs a static export
 
@@ -80,6 +81,10 @@ static-export rewrite applied to an SPA 404s every deep link. `trailingSlash: tr
 
 Routing behaviour is covered by [`test/portal/spa-rewrite.test.ts`](../../test/portal/spa-rewrite.test.ts),
 which executes the generated function. Add cases there when onboarding an app.
+[`test/portal/infrastructure-stack.test.ts`](../../test/portal/infrastructure-stack.test.ts) also
+replays requests against the synthesized distribution, behaviour selection included, so every hosted
+app's bare path, base path and deep links are checked against the bucket that serves them without a
+new case.
 
 ## 4. Read runtime config from `env.js`
 

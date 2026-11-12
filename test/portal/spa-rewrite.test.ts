@@ -12,8 +12,18 @@ import { getHostedApps, HostedApp } from '../../lib/portal/infra/apps';
  * is not enough, so these tests execute it.
  */
 
-type CloudFrontEvent = { request: { uri: string } };
-type Handler = (event: CloudFrontEvent) => { uri: string };
+type QueryString = Record<string, { value: string; multiValue?: { value: string }[] }>;
+type CloudFrontRequest = {
+  uri: string;
+  querystring?: QueryString;
+  rawQueryString?: () => string | undefined;
+};
+type CloudFrontResponse = {
+  statusCode: number;
+  statusDescription?: string;
+  headers: Record<string, { value: string }>;
+};
+type Handler = (event: { request: CloudFrontRequest }) => CloudFrontRequest | CloudFrontResponse;
 
 /**
  * Run the generated function source in a fresh context and return its `handler`, the way CloudFront
@@ -29,7 +39,19 @@ const loadHandlerFor = (hostedApps: HostedApp[]): Handler => {
 
 const loadHandler = (appStage: AppStage): Handler => loadHandlerFor(getHostedApps(appStage));
 
-const route = (handler: Handler, uri: string): string => handler({ request: { uri } }).uri;
+/** The URI the request is forwarded with. Fails if the function answered with a response instead. */
+const route = (handler: Handler, uri: string): string => {
+  const result = handler({ request: { uri, querystring: {} } });
+  expect(result).not.toHaveProperty('statusCode');
+  return (result as CloudFrontRequest).uri;
+};
+
+/** The `Location` of the redirect the function answers with. Fails if it forwarded the request. */
+const redirect = (handler: Handler, request: CloudFrontRequest): string => {
+  const result = handler({ request: { querystring: {}, ...request } }) as CloudFrontResponse;
+  expect(result.statusCode).toBe(302);
+  return result.headers.location.value;
+};
 
 describe('beta, where every app is hosted', () => {
   const handler = loadHandler(AppStage.BETA);
@@ -41,14 +63,15 @@ describe('beta, where every app is hosted', () => {
     ['/libraries/lib.12345', '/index.html'],
     ['/not-an-app/page', '/index.html'],
     // SPA apps: every route loads that app's single shell.
-    ['/v2', '/v2/index.html'],
     ['/v2/', '/v2/index.html'],
     ['/v2/workflows', '/v2/index.html'],
     ['/v2/workflows/deeply/nested', '/v2/index.html'],
-    ['/hub', '/hub/index.html'],
     ['/hub/', '/hub/index.html'],
     ['/hub/dashboard', '/hub/index.html'],
     ['/hub/a/b/c', '/hub/index.html'],
+    ['/orcasonar/', '/orcasonar/index.html'],
+    ['/orcasonar/audit', '/orcasonar/index.html'],
+    ['/orcasonar/chat', '/orcasonar/index.html'],
   ])('SPA: routes %s to %s', (uri, expected) => {
     expect(route(handler, uri)).toBe(expected);
   });
@@ -56,7 +79,6 @@ describe('beta, where every app is hosted', () => {
   test.each([
     // Static export: the requested path is preserved and resolved to its own exported HTML file,
     // so a deep link renders that page rather than the app's home page.
-    ['/orcahouse', '/orcahouse/index.html'],
     ['/orcahouse/', '/orcahouse/index.html'],
     ['/orcahouse/tables', '/orcahouse/tables/index.html'],
     ['/orcahouse/tables/', '/orcahouse/tables/index.html'],
@@ -79,6 +101,9 @@ describe('beta, where every app is hosted', () => {
     '/orcahouse/manifest.json',
     '/orcahouse/_next/static/chunks/main-abc123.js',
     '/v2/assets/index-9f8e7d.js',
+    '/orcasonar/env.js',
+    '/orcasonar/favicon.svg',
+    '/orcasonar/assets/inter-latin-wght-normal-Dx4kXJAl.woff2',
   ])('serves %s unchanged', (uri) => {
     expect(route(handler, uri)).toBe(uri);
   });
@@ -92,11 +117,52 @@ describe('beta, where every app is hosted', () => {
     );
   });
 
+  test.each(['/v2', '/hub', '/orcahouse', '/orcasonar'])(
+    'redirects the bare prefix %s to its base path, whatever the routing mode',
+    (uri) => {
+      // CloudFront picks the behaviour before the function runs, and '/hub' matches no '/hub/*'
+      // pattern, so a rewrite here would still be served from the root app's bucket.
+      expect(redirect(handler, { uri })).toBe(`${uri}/`);
+    }
+  );
+
+  test('keeps the query string on a bare-prefix redirect', () => {
+    expect(
+      redirect(handler, { uri: '/orcasonar', rawQueryString: () => 'view=audit&q=a%26b' })
+    ).toBe('/orcasonar/?view=audit&q=a%26b');
+    // '?' with nothing after it is not worth carrying over.
+    expect(redirect(handler, { uri: '/hub', rawQueryString: () => '' })).toBe('/hub/');
+    expect(redirect(handler, { uri: '/hub', rawQueryString: () => undefined })).toBe('/hub/');
+  });
+
+  test('rebuilds the query string from the parsed object without rawQueryString()', () => {
+    const querystring: QueryString = {
+      view: { value: 'audit' },
+      tag: { value: 'a', multiValue: [{ value: 'a' }, { value: 'b' }] },
+    };
+
+    expect(redirect(handler, { uri: '/orcasonar', querystring })).toBe(
+      '/orcasonar/?view=audit&tag=a&tag=b'
+    );
+    expect(redirect(handler, { uri: '/orcasonar', querystring: {} })).toBe('/orcasonar/');
+  });
+
+  test('only the bare prefix redirects', () => {
+    // The root app's own '/' and anything under a prefix are served, not redirected.
+    expect(route(handler, '/')).toBe('/index.html');
+    expect(route(handler, '/orcasonar/')).toBe('/orcasonar/index.html');
+    expect(route(handler, '/orcahouse/')).toBe('/orcahouse/index.html');
+    // Not an app prefix, so the root app's router owns it.
+    expect(route(handler, '/orcasonarx')).toBe('/index.html');
+    expect(route(handler, '/Hub')).toBe('/index.html');
+  });
+
   test('a prefix is not matched as a bare substring', () => {
     // '/hubbub' is a root-app route, not Hub.
     expect(route(handler, '/hubbub')).toBe('/index.html');
     expect(route(handler, '/v2beta')).toBe('/index.html');
     expect(route(handler, '/orcahouse-admin')).toBe('/index.html');
+    expect(route(handler, '/orcasonarx')).toBe('/index.html');
   });
 
   test('prefix matching is case sensitive, as CloudFront path patterns are', () => {
@@ -113,13 +179,13 @@ describe('beta, where every app is hosted', () => {
   });
 });
 
-describe('prod, where Hub and OrcaHouse are hosted but gamma is skipped', () => {
+describe('prod, where Hub, OrcaHouse and the OrcaSonar Console are hosted but gamma is skipped', () => {
   const handler = loadHandler(AppStage.PROD);
 
   test('keeps serving OrcaUI and v2 exactly as before', () => {
     expect(route(handler, '/')).toBe('/index.html');
     expect(route(handler, '/subjects')).toBe('/index.html');
-    expect(route(handler, '/v2')).toBe('/v2/index.html');
+    expect(route(handler, '/v2/')).toBe('/v2/index.html');
     expect(route(handler, '/v2/workflows')).toBe('/v2/index.html');
     expect(route(handler, '/env.js')).toBe('/env.js');
   });
@@ -127,10 +193,17 @@ describe('prod, where Hub and OrcaHouse are hosted but gamma is skipped', () => 
   test('serves the new apps', () => {
     expect(route(handler, '/hub/dashboard')).toBe('/hub/index.html');
     expect(route(handler, '/orcahouse/tables')).toBe('/orcahouse/tables/index.html');
+    expect(route(handler, '/orcasonar/audit')).toBe('/orcasonar/index.html');
+  });
+
+  test('redirects every bare prefix', () => {
+    for (const uri of ['/v2', '/hub', '/orcahouse', '/orcasonar']) {
+      expect(redirect(handler, { uri })).toBe(`${uri}/`);
+    }
   });
 });
 
-describe('gamma, where Hub and OrcaHouse are not hosted', () => {
+describe('gamma, where Hub, OrcaHouse and the OrcaSonar Console are not hosted', () => {
   const handler = loadHandler(AppStage.GAMMA);
 
   test('routes an unprovisioned app to the root app rather than a missing origin', () => {
@@ -139,6 +212,13 @@ describe('gamma, where Hub and OrcaHouse are not hosted', () => {
     expect(route(handler, '/hub')).toBe('/index.html');
     expect(route(handler, '/hub/dashboard')).toBe('/index.html');
     expect(route(handler, '/orcahouse/tables')).toBe('/index.html');
+    expect(route(handler, '/orcasonar/audit')).toBe('/index.html');
+    // No redirect either: '/orcasonar/' would fall through to the root app all the same.
+    expect(route(handler, '/orcasonar')).toBe('/index.html');
+  });
+
+  test('still redirects the bare prefix of an app it does host', () => {
+    expect(redirect(handler, { uri: '/v2' })).toBe('/v2/');
   });
 });
 
